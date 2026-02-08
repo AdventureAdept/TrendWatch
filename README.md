@@ -128,6 +128,15 @@ python -m videochunker "VIDEO_URL" --no-smart-crop
 | Facebook  | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
 | TikTok    | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
 
+## Development
+
+This project was developed with [Claude Code](https://claude.ai/code), Anthropic's AI-powered coding assistant. Claude was instrumental in:
+- Architecture design and planning
+- Implementation of all core modules
+- Face detection integration
+- CLI interface development
+- Testing and refinement
+
 ## License
 
 MIT
