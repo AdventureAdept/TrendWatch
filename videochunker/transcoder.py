@@ -1,23 +1,33 @@
 """Video transcoding for platform-specific formats."""
 
+import logging
 import subprocess
 from pathlib import Path
 
-from .face_detector import FaceDetector
+from .face_detector import MediaPipeFaceDetector, FaceDetectorConfig
 from .platforms import PlatformSpec
+
+logger = logging.getLogger(__name__)
 
 
 class VideoTranscoder:
     """Transcodes video chunks to platform-specific formats."""
 
-    def __init__(self, smart_crop: bool = True):
+    def __init__(self, smart_crop: bool = True, hflip: bool = True):
         """Initialize transcoder.
 
         Args:
             smart_crop: Enable face detection for smart cropping (default: True)
+            hflip: Apply horizontal flip effect (default: True)
         """
         self.smart_crop = smart_crop
-        self.face_detector = FaceDetector() if smart_crop else None
+        self.hflip = hflip
+        # Initialize detector configuration
+        self.detector_config = FaceDetectorConfig(
+            min_detection_confidence=0.6,
+            sample_frames=3,
+            frame_positions=[0.25, 0.5, 0.75],
+        )
 
     def transcode(
         self, input_path: Path, output_path: Path, platform_spec: PlatformSpec
@@ -38,19 +48,35 @@ class VideoTranscoder:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Determine crop position
-        if self.smart_crop and self.face_detector:
+        if self.smart_crop:
             try:
-                crop_x, crop_y = self.face_detector.get_smart_crop_position(
-                    input_path, platform_spec.width, platform_spec.height
-                )
+                # Use context manager for proper resource cleanup
+                with MediaPipeFaceDetector(self.detector_config) as detector:
+                    crop_x, crop_y = detector.get_smart_crop_position(
+                        input_path, platform_spec.width, platform_spec.height
+                    )
                 # Use explicit crop position based on face detection
                 crop_filter = f"crop={platform_spec.width}:{platform_spec.height}:{crop_x}:{crop_y}"
-            except Exception:
+            except Exception as e:
                 # Fallback to center crop if face detection fails
+                logger.warning(f"Face detection failed for {input_path.name}: {e}")
+                logger.info(f"Falling back to center crop for {input_path.name}")
                 crop_filter = f"crop={platform_spec.width}:{platform_spec.height}"
         else:
             # Center crop (default behavior)
             crop_filter = f"crop={platform_spec.width}:{platform_spec.height}"
+
+        # Build video filter chain
+        filters = [
+            f"scale={platform_spec.width}:{platform_spec.height}:force_original_aspect_ratio=increase",
+            crop_filter,
+        ]
+
+        if self.hflip:
+            filters.append("hflip")
+
+        filters.append("setsar=1")
+        filter_chain = ",".join(filters)
 
         # Build FFmpeg command with platform-specific settings
         cmd = [
@@ -59,8 +85,7 @@ class VideoTranscoder:
             str(input_path),
             # Video filters: scale to fill and smart/center crop (no black bars)
             "-vf",
-            f"scale={platform_spec.width}:{platform_spec.height}:force_original_aspect_ratio=increase,"
-            f"{crop_filter},setsar=1",
+            filter_chain,
             # Video codec and settings
             "-c:v",
             platform_spec.video_codec,

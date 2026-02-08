@@ -31,6 +31,7 @@ python -m videochunker <video_url>
 # --duration, -d: Chunk duration in seconds [default: 30]
 # --max-chunks, -m: Maximum chunks to create [default: 5]
 # --smart-crop/--no-smart-crop: Enable face detection for smart cropping [default: enabled]
+# --hflip/--no-hflip: Apply horizontal flip effect to output videos [default: enabled]
 # --keep-temp: Keep temporary files
 
 # Run tests

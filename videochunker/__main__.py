@@ -1,5 +1,6 @@
 """CLI entry point for videochunker."""
 
+import logging
 import shutil
 import sys
 from pathlib import Path
@@ -10,6 +11,12 @@ from .chunker import VideoChunker
 from .downloader import VideoDownloader
 from .platforms import PlatformType, get_all_platforms, get_platform_spec
 from .transcoder import VideoTranscoder
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s: %(message)s'
+)
 
 
 @click.command()
@@ -48,6 +55,11 @@ from .transcoder import VideoTranscoder
     help="Enable face detection for smart cropping (default: enabled)",
 )
 @click.option(
+    "--hflip/--no-hflip",
+    default=True,
+    help="Apply horizontal flip effect to output videos (default: enabled)",
+)
+@click.option(
     "--keep-temp",
     is_flag=True,
     help="Keep temporary files after processing",
@@ -59,6 +71,7 @@ def main(
     duration: int,
     max_chunks: int,
     smart_crop: bool,
+    hflip: bool,
     keep_temp: bool,
 ):
     """Split videos from URLs into platform-specific reels.
@@ -69,7 +82,8 @@ def main(
     click.echo(f"📱 Target platform(s): {platform}")
     click.echo(f"⏱️  Chunk duration: {duration}s")
     click.echo(f"📊 Max chunks: {max_chunks}")
-    click.echo(f"🤖 Smart crop: {'enabled' if smart_crop else 'disabled'}\n")
+    click.echo(f"🤖 Smart crop: {'enabled' if smart_crop else 'disabled'}")
+    click.echo(f"🔄 Horizontal flip: {'enabled' if hflip else 'disabled'}\n")
 
     # Check FFmpeg availability
     if not shutil.which("ffmpeg"):
@@ -80,7 +94,7 @@ def main(
     output_dir = Path(output)
     downloader = VideoDownloader()
     chunker = VideoChunker(chunk_duration=duration, max_chunks=max_chunks)
-    transcoder = VideoTranscoder(smart_crop=smart_crop)
+    transcoder = VideoTranscoder(smart_crop=smart_crop, hflip=hflip)
 
     try:
         # Step 1: Download video
