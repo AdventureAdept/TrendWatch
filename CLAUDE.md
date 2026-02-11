@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CLI tool that downloads videos from URLs and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart face detection for intelligent cropping that fills the entire 9:16 screen.
+CLI tool that processes videos (from URLs or local files) and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart face detection for intelligent cropping that fills the entire 9:16 screen.
 
 ## Tech Stack
 
@@ -23,7 +23,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run CLI (default: first 5 chunks, all platforms)
-python -m videochunker <video_url>
+# Input can be a URL or local file path
+python -m videochunker <video_input>
+
+# Examples:
+# python -m videochunker "https://youtube.com/watch?v=..."
+# python -m videochunker "/path/to/video.mp4"
+# python -m videochunker "./my-video.mkv"
 
 # Options:
 # --platform, -p: Target platform (youtube|instagram|facebook|tiktok|all) [default: all]
@@ -33,6 +39,8 @@ python -m videochunker <video_url>
 # --smart-crop/--no-smart-crop: Enable face detection for smart cropping [default: enabled]
 # --hflip/--no-hflip: Apply horizontal flip effect to output videos [default: enabled]
 # --keep-temp: Keep temporary files
+
+# Supported video formats: MP4, MKV, AVI, MOV, WebM, FLV, WMV, M4V
 
 # Run tests
 pytest
@@ -67,7 +75,7 @@ The tool uses OpenCV's Haar Cascade classifier to detect faces in video frames:
 |-----------|--------------|--------------|------------|--------|
 | YouTube   | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
 | Instagram | 9:16         | 90s          | 1080x1920  | MP4/H.264 |
-| Facebook  | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
+| Facebook  | 9:16         | 90s          | 1080x1920  | MP4/H.264 |
 | TikTok    | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
 
 ## Key Dependencies

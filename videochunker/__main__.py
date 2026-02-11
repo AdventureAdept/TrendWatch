@@ -19,8 +19,44 @@ logging.basicConfig(
 )
 
 
+def detect_input_type(video_input: str) -> tuple[str, Path | None]:
+    """Detect if input is URL or local file path.
+
+    Args:
+        video_input: Either a URL or file path
+
+    Returns:
+        Tuple of (input_type, video_path)
+        - input_type: "url" or "file"
+        - video_path: Path to video file (None for URLs, actual path for files)
+
+    Raises:
+        FileNotFoundError: If local file doesn't exist
+        ValueError: If path is not a file or has unsupported format
+    """
+    if video_input.startswith(('http://', 'https://', 'www.')):
+        # URL mode - download required
+        return "url", None
+    else:
+        # Local file mode - verify exists
+        path = Path(video_input).resolve()
+
+        if not path.exists():
+            raise FileNotFoundError(f"Video file not found: {video_input}")
+
+        if not path.is_file():
+            raise ValueError(f"Path is not a file: {video_input}")
+
+        # Verify it's a video file (check extension)
+        valid_extensions = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv', '.m4v'}
+        if path.suffix.lower() not in valid_extensions:
+            raise ValueError(f"Unsupported file format: {path.suffix}")
+
+        return "file", path
+
+
 @click.command()
-@click.argument("video_url")
+@click.argument("video_input")
 @click.option(
     "--platform",
     "-p",
@@ -65,7 +101,7 @@ logging.basicConfig(
     help="Keep temporary files after processing",
 )
 def main(
-    video_url: str,
+    video_input: str,
     platform: PlatformType,
     output: str,
     duration: int,
@@ -74,11 +110,20 @@ def main(
     hflip: bool,
     keep_temp: bool,
 ):
-    """Split videos from URLs into platform-specific reels.
+    """Split videos from URLs or local files into platform-specific reels.
 
-    VIDEO_URL: URL of the video to download and process
+    VIDEO_INPUT can be:
+      - YouTube URL: https://youtube.com/watch?v=...
+      - Local file path: /path/to/video.mp4 or ./video.mkv
     """
-    click.echo(f"🎬 Video Chunker - Processing: {video_url}")
+    # Detect input type
+    try:
+        input_type, local_path = detect_input_type(video_input)
+    except (FileNotFoundError, ValueError) as e:
+        click.echo(f"❌ Error: {e}", err=True)
+        raise click.Abort()
+
+    click.echo(f"🎬 Video Chunker - Processing: {video_input}")
     click.echo(f"📱 Target platform(s): {platform}")
     click.echo(f"⏱️  Chunk duration: {duration}s")
     click.echo(f"📊 Max chunks: {max_chunks}")
@@ -97,10 +142,17 @@ def main(
     transcoder = VideoTranscoder(smart_crop=smart_crop, hflip=hflip)
 
     try:
-        # Step 1: Download video
-        click.echo("📥 Downloading video...")
-        video_path = downloader.download(video_url)
-        click.echo(f"✅ Downloaded: {video_path.name}\n")
+        # Step 1: Handle input (download URL or use local file)
+        if input_type == "url":
+            # URL mode - download video
+            click.echo("📥 Downloading video...")
+            video_path = downloader.download(video_input)
+            click.echo(f"✅ Downloaded: {video_path.name}\n")
+        else:
+            # Local file mode - use directly
+            click.echo(f"📁 Using local file: {local_path.name}")
+            video_path = local_path
+            click.echo()
 
         # Step 2: Chunk video
         click.echo(f"✂️  Splitting into {duration}s chunks (max: {max_chunks})...")

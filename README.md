@@ -1,10 +1,11 @@
 # Video Chunker
 
-CLI tool that downloads videos from URLs and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok).
+CLI tool that processes videos (from URLs or local files) and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok).
 
 ## Features
 
 - 📥 Download videos from any URL (YouTube, Twitter, etc.) using yt-dlp
+- 📁 Process local video files directly (no download needed)
 - ✂️ Split videos into 30-second chunks (configurable)
 - 🎨 Transcode to platform-specific formats (9:16 aspect ratio, proper encoding)
 - 🤖 Smart face detection for intelligent cropping (fills entire screen, no black bars)
@@ -51,41 +52,63 @@ pip install -r requirements.txt
 ## Usage
 
 ### Basic usage (process for all platforms):
+
+**From URL:**
 ```bash
 python -m videochunker "https://youtube.com/watch?v=..."
 ```
 
+**From local file:**
+```bash
+python -m videochunker "/path/to/video.mp4"
+python -m videochunker "./my-video.mkv"
+```
+
+**Supported video formats:** MP4, MKV, AVI, MOV, WebM, FLV, WMV, M4V
+
 ### Specify a platform:
 ```bash
-python -m videochunker "VIDEO_URL" --platform youtube
-python -m videochunker "VIDEO_URL" --platform instagram
-python -m videochunker "VIDEO_URL" --platform facebook
-python -m videochunker "VIDEO_URL" --platform tiktok
+# URL input
+python -m videochunker "https://youtube.com/watch?v=..." --platform youtube
+
+# Local file input
+python -m videochunker "/home/user/video.mp4" --platform instagram
+python -m videochunker "./video.mkv" --platform facebook
 ```
 
 ### Custom output directory:
 ```bash
-python -m videochunker "VIDEO_URL" --output ./my-reels
+python -m videochunker "VIDEO_INPUT" --output ./my-reels
 ```
 
 ### Custom chunk duration:
 ```bash
-python -m videochunker "VIDEO_URL" --duration 60
+python -m videochunker "VIDEO_INPUT" --duration 60
 ```
 
 ### Limit number of chunks (default is 5):
 ```bash
-python -m videochunker "VIDEO_URL" --max-chunks 10
+python -m videochunker "VIDEO_INPUT" --max-chunks 10
 ```
 
 ### Disable smart face detection (use center crop instead):
 ```bash
-python -m videochunker "VIDEO_URL" --no-smart-crop
+python -m videochunker "VIDEO_INPUT" --no-smart-crop
 ```
 
 ### Keep temporary files:
 ```bash
-python -m videochunker "VIDEO_URL" --keep-temp
+python -m videochunker "VIDEO_INPUT" --keep-temp
+```
+
+### Complete example with all options:
+```bash
+python -m videochunker "/movies/inception.mp4" \
+  --platform tiktok \
+  --duration 15 \
+  --max-chunks 10 \
+  --smart-crop \
+  --output ./my-reels
 ```
 
 ## Output Structure
@@ -125,7 +148,7 @@ python -m videochunker "VIDEO_URL" --no-smart-crop
 |-----------|--------------|--------------|------------|--------|
 | YouTube   | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
 | Instagram | 9:16         | 90s          | 1080x1920  | MP4/H.264 |
-| Facebook  | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
+| Facebook  | 9:16         | 90s          | 1080x1920  | MP4/H.264 |
 | TikTok    | 9:16         | 60s          | 1080x1920  | MP4/H.264 |
 
 ## Development
