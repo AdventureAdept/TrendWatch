@@ -88,7 +88,13 @@ def detect_input_type(video_input: str) -> tuple[str, Path | None]:
 @click.option(
     "--smart-crop/--no-smart-crop",
     default=True,
-    help="Enable face detection for smart cropping (default: enabled)",
+    help="Enable smart cropping (default: enabled)",
+)
+@click.option(
+    "--crop-method",
+    type=click.Choice(["mediapipe", "yolo"]),
+    default="mediapipe",
+    help="Crop detection method: mediapipe (faces) or yolo (people)",
 )
 @click.option(
     "--hflip/--no-hflip",
@@ -107,6 +113,7 @@ def main(
     duration: int,
     max_chunks: int,
     smart_crop: bool,
+    crop_method: str,
     hflip: bool,
     keep_temp: bool,
 ):
@@ -127,7 +134,10 @@ def main(
     click.echo(f"📱 Target platform(s): {platform}")
     click.echo(f"⏱️  Chunk duration: {duration}s")
     click.echo(f"📊 Max chunks: {max_chunks}")
-    click.echo(f"🤖 Smart crop: {'enabled' if smart_crop else 'disabled'}")
+    if smart_crop:
+        click.echo(f"🤖 Smart crop: enabled ({crop_method})")
+    else:
+        click.echo(f"🤖 Smart crop: disabled")
     click.echo(f"🔄 Horizontal flip: {'enabled' if hflip else 'disabled'}\n")
 
     # Check FFmpeg availability
@@ -139,7 +149,7 @@ def main(
     output_dir = Path(output)
     downloader = VideoDownloader()
     chunker = VideoChunker(chunk_duration=duration, max_chunks=max_chunks)
-    transcoder = VideoTranscoder(smart_crop=smart_crop, hflip=hflip)
+    transcoder = VideoTranscoder(smart_crop=smart_crop, hflip=hflip, crop_method=crop_method)
 
     try:
         # Step 1: Handle input (download URL or use local file)

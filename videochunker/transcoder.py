@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 from .face_detector import MediaPipeFaceDetector, FaceDetectorConfig
+from .yolo_cropper import YOLOCropper
 from .platforms import PlatformSpec
 
 logger = logging.getLogger(__name__)
@@ -13,21 +14,32 @@ logger = logging.getLogger(__name__)
 class VideoTranscoder:
     """Transcodes video chunks to platform-specific formats."""
 
-    def __init__(self, smart_crop: bool = True, hflip: bool = True):
+    def __init__(self, smart_crop: bool = True, hflip: bool = True, crop_method: str = "mediapipe"):
         """Initialize transcoder.
 
         Args:
-            smart_crop: Enable face detection for smart cropping (default: True)
+            smart_crop: Enable smart cropping (default: True)
             hflip: Apply horizontal flip effect (default: True)
+            crop_method: Cropping method - "mediapipe" or "yolo" (default: "mediapipe")
         """
         self.smart_crop = smart_crop
         self.hflip = hflip
-        # Initialize detector configuration
-        self.detector_config = FaceDetectorConfig(
-            min_detection_confidence=0.6,
-            sample_frames=3,
-            frame_positions=[0.25, 0.5, 0.75],
-        )
+        self.crop_method = crop_method
+
+        # Initialize appropriate detector based on crop method
+        if crop_method == "yolo":
+            logger.info("Using YOLO-based person detection for cropping")
+            self.yolo_cropper = YOLOCropper()
+            self.mediapipe_detector = None
+        else:  # mediapipe
+            logger.info("Using MediaPipe face detection for cropping")
+            # Initialize detector configuration
+            self.detector_config = FaceDetectorConfig(
+                min_detection_confidence=0.6,
+                sample_frames=3,
+                frame_positions=[0.25, 0.5, 0.75],
+            )
+            self.yolo_cropper = None
 
     def transcode(
         self, input_path: Path, output_path: Path, platform_spec: PlatformSpec
@@ -50,12 +62,18 @@ class VideoTranscoder:
         # Determine crop position
         if self.smart_crop:
             try:
-                # Use context manager for proper resource cleanup
-                with MediaPipeFaceDetector(self.detector_config) as detector:
-                    crop_x, crop_y = detector.get_smart_crop_position(
+                if self.crop_method == "yolo":
+                    # Use YOLO person detection
+                    crop_x, crop_y = self.yolo_cropper.get_smart_crop_position(
                         input_path, platform_spec.width, platform_spec.height
                     )
-                # Use explicit crop position based on face detection
+                else:
+                    # Use MediaPipe face detection (context manager for resource cleanup)
+                    with MediaPipeFaceDetector(self.detector_config) as detector:
+                        crop_x, crop_y = detector.get_smart_crop_position(
+                            input_path, platform_spec.width, platform_spec.height
+                        )
+                # Use explicit crop position based on detection
                 crop_filter = f"crop={platform_spec.width}:{platform_spec.height}:{crop_x}:{crop_y}"
             except Exception as e:
                 # Fallback to center crop if face detection fails

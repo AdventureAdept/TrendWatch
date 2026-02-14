@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CLI tool that processes videos (from URLs or local files) and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart face detection for intelligent cropping that fills the entire 9:16 screen.
+CLI tool that processes videos (from URLs or local files) and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart cropping with MediaPipe (face detection) or YOLO (person detection) that fills the entire 9:16 screen.
 
 ## Tech Stack
 
@@ -36,11 +36,16 @@ python -m videochunker <video_input>
 # --output, -o: Output directory [default: ./output]
 # --duration, -d: Chunk duration in seconds [default: 30]
 # --max-chunks, -m: Maximum chunks to create [default: 5]
-# --smart-crop/--no-smart-crop: Enable face detection for smart cropping [default: enabled]
+# --smart-crop/--no-smart-crop: Enable smart cropping [default: enabled]
+# --crop-method: Cropping method - mediapipe (faces) or yolo (people) [default: mediapipe]
 # --hflip/--no-hflip: Apply horizontal flip effect to output videos [default: enabled]
 # --keep-temp: Keep temporary files
 
 # Supported video formats: MP4, MKV, AVI, MOV, WebM, FLV, WMV, M4V
+
+# Examples with different crop methods:
+# python -m videochunker "./video.mp4" -p facebook --crop-method mediapipe  # Fast, faces
+# python -m videochunker "./video.mp4" -p facebook --crop-method yolo      # Advanced, people
 
 # Run tests
 pytest
