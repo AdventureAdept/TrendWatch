@@ -45,3 +45,16 @@ output/
 tmp/
 temp/
 *.tmp
+
+# ML Models (large files)
+*.gguf
+*.bin
+videochunker/models/*.gguf
+videochunker/models/*.bin
+videochunker/models/sentence-transformer/
+
+# YouTube OAuth credentials and tokens
+.trendwatch/
+youtube_token.pickle
+client_secrets.json
+*_uploads.json
