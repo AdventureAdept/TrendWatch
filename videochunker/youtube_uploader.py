@@ -231,7 +231,8 @@ class YouTubeUploader:
         title: str,
         description: str = "",
         tags: Optional[List[str]] = None,
-        privacy_status: str = "public"
+        privacy_status: str = "public",
+        category_id: str = "24"
     ) -> UploadResult:
         """Upload a single video to YouTube as a Short.
 
@@ -263,7 +264,7 @@ class YouTubeUploader:
                 'title': title[:100],  # YouTube title limit
                 'description': description,
                 'tags': tags or [],
-                'categoryId': '22'  # People & Blogs (standard for Shorts)
+                'categoryId': category_id
             },
             'status': {
                 'privacyStatus': privacy_status,
@@ -322,7 +323,8 @@ class YouTubeUploader:
         title_template: str = "{filename} - Part {n}",
         description: str = "",
         tags: Optional[List[str]] = None,
-        privacy_status: str = "public"
+        privacy_status: str = "public",
+        category_id: str = "24"
     ) -> List[UploadResult]:
         """Upload multiple videos with templated titles.
 
@@ -363,7 +365,8 @@ class YouTubeUploader:
                     title=title,
                     description=description,
                     tags=tags,
-                    privacy_status=privacy_status
+                    privacy_status=privacy_status,
+                    category_id=category_id
                 )
                 results.append(result)
                 print()  # Blank line between uploads

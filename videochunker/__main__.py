@@ -173,6 +173,11 @@ def detect_input_type(video_input: str) -> tuple[str, Path | None]:
     help="Privacy status for YouTube uploads",
 )
 @click.option(
+    "--youtube-category",
+    default="24",
+    help="YouTube category ID (default: 24=Entertainment). Common: 1=Film, 10=Music, 17=Sports, 20=Gaming, 22=People&Blogs, 24=Entertainment, 27=Education",
+)
+@click.option(
     "--youtube-tags",
     default="",
     help="Comma-separated tags for YouTube uploads",
@@ -191,6 +196,7 @@ def main(
     youtube_title: str,
     youtube_description: str,
     youtube_privacy: str,
+    youtube_category: str,
     youtube_tags: str,
 ):
     """Split videos from URLs or local files into platform-specific reels.
@@ -376,7 +382,8 @@ def main(
                                     title=metadata['title'],
                                     description=metadata['description'],
                                     tags=metadata['tags'],
-                                    privacy_status=youtube_privacy
+                                    privacy_status=youtube_privacy,
+                                    category_id=youtube_category
                                 )
                                 results.append(result)
                                 click.echo()  # Blank line between uploads
@@ -415,7 +422,8 @@ def main(
                                     title=title,
                                     description=trimmed_desc,
                                     tags=yt_tags,
-                                    privacy_status=youtube_privacy
+                                    privacy_status=youtube_privacy,
+                                    category_id=youtube_category
                                 )
                                 results.append(result)
                                 click.echo()
@@ -437,7 +445,8 @@ def main(
                             title_template=youtube_title,
                             description=youtube_description,
                             tags=tags,
-                            privacy_status=youtube_privacy
+                            privacy_status=youtube_privacy,
+                            category_id=youtube_category
                         )
 
                     # Save upload metadata
