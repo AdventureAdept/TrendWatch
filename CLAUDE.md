@@ -190,6 +190,7 @@ Upload results are saved to `{output_dir}/youtube_uploads.json`:
 - Token auto-refreshes using refresh_token
 - Re-authorization required if refresh fails
 
+
 ## Architecture
 
 ```
@@ -228,6 +229,7 @@ The tool uses OpenCV's Haar Cascade classifier to detect faces in video frames:
 - `opencv-python`: OpenCV for image processing
 - `mediapipe`: Face detection for smart cropping
 - `click`: CLI framework
+- `requests`: HTTP client for TikTok API calls
 - `google-api-python-client`: YouTube Data API v3 client
 - `google-auth-oauthlib`: OAuth 2.0 authentication for YouTube uploads
 - FFmpeg must be installed system-wide (`apt install ffmpeg` or `brew install ffmpeg`)
