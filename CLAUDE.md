@@ -31,15 +31,16 @@ python -m videochunker <video_input>
 # python -m videochunker "/path/to/video.mp4"
 # python -m videochunker "./my-video.mkv"
 
-# Options:
-# --platform, -p: Target platform (youtube|instagram|facebook|tiktok|all) [default: all]
+# Options (long / short alias):
+# --platform, -p: Target platform [default: all]
+#   Values: youtube/yt, instagram/ig, facebook/fb, tiktok/tk, all
 # --output, -o: Output directory [default: ./output]
 # --duration, -d: Chunk duration in seconds [default: 60]
 # --max-chunks, -m: Maximum chunks to create [default: 5]
-# --smart-crop/--no-smart-crop: Enable smart cropping with MediaPipe face detection [default: enabled]
-# --hflip/--no-hflip: Apply horizontal flip effect to output videos [default: enabled]
-# --fetch-imdb/--no-fetch-imdb: Fetch IMDb metadata if filename contains IMDb ID [default: enabled]
-# --keep-temp: Keep temporary files
+# --smart-crop/--no-smart-crop (--sc/--no-sc): Smart cropping [default: enabled]
+# --hflip/--no-hflip (--hf/--no-hf): Horizontal flip [default: enabled]
+# --fetch-imdb/--no-fetch-imdb (--imdb/--no-imdb): IMDb metadata [default: enabled]
+# --keep-temp (--kt): Keep temporary files
 
 # Supported video formats: MP4, MKV, AVI, MOV, WebM, FLV, WMV, M4V
 
@@ -81,7 +82,7 @@ TrendWatch supports automatic YouTube Shorts upload after video processing using
    ```
 
 5. **First-time Authorization:**
-   - Run any command with `--upload-youtube`
+   - Run any command with `--upload-youtube` (or `--u-yt`)
    - Browser will open for authorization
    - Token will be cached at `~/.trendwatch/youtube_token.pickle`
    - Future runs will use cached token (no browser needed)
@@ -89,44 +90,40 @@ TrendWatch supports automatic YouTube Shorts upload after video processing using
 ### YouTube Upload Options
 
 ```bash
-# --upload-youtube/--no-upload-youtube: Enable YouTube upload [default: disabled]
-# --youtube-title: Title template with placeholders [default: "{filename} - Part {n}"]
+# --upload-youtube/--no-upload-youtube (--u-yt/--no-u-yt): Enable YouTube upload [default: disabled]
+# --youtube-title (--yt-title): Title template [default: "{filename} - Part {n}"]
 #   Placeholders: {n} (chunk number), {filename} (base name), {total} (total videos)
-# --youtube-description: Video description [default: ""]
+# --youtube-description (--yt-desc): Video description [default: ""]
 #   Note: #Shorts tag is auto-added to description
-# --youtube-privacy: Privacy status (public|unlisted|private) [default: public]
-# --youtube-tags: Comma-separated tags [default: ""]
+# --youtube-privacy (--yt-priv): Privacy status (public|unlisted|private) [default: public]
+# --youtube-category (--yt-cat): Category ID [default: 24 (Entertainment)]
+# --youtube-tags (--yt-tags): Comma-separated tags [default: ""]
 ```
 
 ### YouTube Upload Examples
 
 ```bash
 # Basic upload (process + upload to YouTube)
-python -m videochunker "video.mp4" --upload-youtube
+python -m videochunker "video.mp4" --u-yt
 
 # Upload with IMDb metadata (automatic title/description/tags)
-python -m videochunker "tt1856101.mp4" --upload-youtube
+python -m videochunker "tt1856101.mp4" --u-yt
 # Auto-generates: "Blade Runner 2049 (2017) - Part 1"
 # Description: Plot summary + IMDb rating + Director
 # Tags: Genre + Actors + Year + "Shorts"
 
 # Custom metadata (overrides IMDb)
 python -m videochunker "tt1856101.mp4" \
-  --platform youtube \
-  --upload-youtube \
-  --youtube-title "{filename} - Epic Scene #{n}" \
-  --youtube-description "Amazing moment from Blade Runner 2049" \
-  --youtube-tags "movie,scifi,shorts,cinema"
+  -p yt --u-yt \
+  --yt-title "{filename} - Epic Scene #{n}" \
+  --yt-desc "Amazing moment from Blade Runner 2049" \
+  --yt-tags "movie,scifi,shorts,cinema"
 
 # Unlisted uploads for review
-python -m videochunker "video.mp4" \
-  --upload-youtube \
-  --youtube-privacy unlisted
+python -m videochunker "video.mp4" --u-yt --yt-priv unlisted
 
 # Multi-platform processing (uploads only YouTube Shorts)
-python -m videochunker "video.mp4" \
-  --platform all \
-  --upload-youtube
+python -m videochunker "video.mp4" --u-yt
 # Processes for all platforms, but only uploads YouTube Shorts
 ```
 
@@ -141,9 +138,9 @@ When a video filename contains an IMDb ID (e.g., `tt1856101.mp4`):
    - **Tags:** Genres + Actors + Year + "Shorts" + "MovieClips"
 
 **Override behavior:**
-- Providing `--youtube-title` overrides auto-generated titles
-- Providing `--youtube-description` overrides IMDb plot
-- Providing `--youtube-tags` adds to (not replaces) IMDb tags
+- Providing `--yt-title` overrides auto-generated titles
+- Providing `--yt-desc` overrides IMDb plot
+- Providing `--yt-tags` adds to (not replaces) IMDb tags
 
 ### Upload Metadata
 

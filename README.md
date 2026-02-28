@@ -50,7 +50,7 @@ TrendWatch can automatically upload your processed videos to YouTube Shorts afte
 
 3. **Upload videos:**
    ```bash
-   python -m videochunker "video.mp4" --upload-youtube
+   python -m videochunker "video.mp4" --u-yt
    ```
    - First run: Browser opens for authorization
    - Token cached at `~/.trendwatch/youtube_token.pickle`
@@ -60,13 +60,13 @@ TrendWatch can automatically upload your processed videos to YouTube Shorts afte
 
 **Basic upload:**
 ```bash
-python -m videochunker "video.mp4" --upload-youtube
+python -m videochunker "video.mp4" --u-yt
 ```
 
 **Upload with IMDb metadata (automatic):**
 ```bash
 # Video with IMDb ID in filename
-python -m videochunker "tt1856101.mp4" --upload-youtube
+python -m videochunker "tt1856101.mp4" --u-yt
 
 # Automatically generates:
 # Title: "Blade Runner 2049 (2017) - Part 1"
@@ -77,28 +77,27 @@ python -m videochunker "tt1856101.mp4" --upload-youtube
 **Custom titles and metadata (overrides IMDb):**
 ```bash
 python -m videochunker "tt1856101.mp4" \
-  --upload-youtube \
-  --youtube-title "Epic Scene #{n} - {filename}" \
-  --youtube-description "Amazing cinematic moments" \
-  --youtube-tags "movie,shorts,cinema"
+  --u-yt \
+  --yt-title "Epic Scene #{n} - {filename}" \
+  --yt-desc "Amazing cinematic moments" \
+  --yt-tags "movie,shorts,cinema"
 ```
 
 **Unlisted uploads (for review):**
 ```bash
-python -m videochunker "video.mp4" \
-  --upload-youtube \
-  --youtube-privacy unlisted
+python -m videochunker "video.mp4" --u-yt --yt-priv unlisted
 ```
 
 ### Upload Options
 
-| Option | Description | Default | IMDb Auto-Fill |
-|--------|-------------|---------|----------------|
-| `--upload-youtube` | Enable YouTube upload after processing | Disabled | - |
-| `--youtube-title` | Title template (`{n}`, `{filename}`, `{total}`) | `{filename} - Part {n}` | `Title (Year) - Part N` |
-| `--youtube-description` | Video description (auto-adds #Shorts) | Empty | Plot + Rating + Director |
-| `--youtube-privacy` | Privacy status (public/unlisted/private) | `public` | - |
-| `--youtube-tags` | Comma-separated tags | Empty | Genre + Actors + Year |
+| Option | Short | Description | Default | IMDb Auto-Fill |
+|--------|-------|-------------|---------|----------------|
+| `--upload-youtube` | `--u-yt` | Enable YouTube upload | Disabled | - |
+| `--youtube-title` | `--yt-title` | Title template (`{n}`, `{filename}`, `{total}`) | `{filename} - Part {n}` | `Title (Year) - Part N` |
+| `--youtube-description` | `--yt-desc` | Video description (auto-adds #Shorts) | Empty | Plot + Rating + Director |
+| `--youtube-privacy` | `--yt-priv` | Privacy (public/unlisted/private) | `public` | - |
+| `--youtube-category` | `--yt-cat` | Category ID | `24` (Entertainment) | - |
+| `--youtube-tags` | `--yt-tags` | Comma-separated tags | Empty | Genre + Actors + Year |
 
 **Note:** When IMDb metadata is available (filename contains `tt#######`), titles, descriptions, and tags are automatically generated from movie data. CLI options override these defaults.
 
@@ -188,48 +187,64 @@ python -m videochunker "./my-video.mkv"
 
 ### Specify a platform:
 ```bash
-# URL input
+# Long form
 python -m videochunker "https://youtube.com/watch?v=..." --platform youtube
 
-# Local file input
-python -m videochunker "/home/user/video.mp4" --platform instagram
-python -m videochunker "./video.mkv" --platform facebook
+# Short form (yt, ig, fb, tk)
+python -m videochunker "https://youtube.com/watch?v=..." -p yt
+python -m videochunker "/home/user/video.mp4" -p ig
+python -m videochunker "./video.mkv" -p fb
 ```
 
 ### Custom output directory:
 ```bash
-python -m videochunker "VIDEO_INPUT" --output ./my-reels
+python -m videochunker "VIDEO_INPUT" -o ./my-reels
 ```
 
 ### Custom chunk duration:
 ```bash
-python -m videochunker "VIDEO_INPUT" --duration 60
+python -m videochunker "VIDEO_INPUT" -d 60
 ```
 
 ### Limit number of chunks (default is 5):
 ```bash
-python -m videochunker "VIDEO_INPUT" --max-chunks 10
+python -m videochunker "VIDEO_INPUT" -m 10
 ```
 
 ### Disable smart cropping (use center crop):
 ```bash
-python -m videochunker "VIDEO_INPUT" --no-smart-crop
+python -m videochunker "VIDEO_INPUT" --no-sc
 ```
 
 ### Keep temporary files:
 ```bash
-python -m videochunker "VIDEO_INPUT" --keep-temp
+python -m videochunker "VIDEO_INPUT" --kt
 ```
 
 ### Complete example with all options:
 ```bash
 python -m videochunker "/movies/inception.mp4" \
-  --platform tiktok \
-  --duration 15 \
-  --max-chunks 10 \
-  --smart-crop \
-  --output ./my-reels
+  -p tk -d 15 -m 10 --sc -o ./my-reels
 ```
+
+### CLI Quick Reference
+
+| Option | Long Form | Short |
+|--------|-----------|-------|
+| Platform | `--platform` | `-p` (values: `yt`, `ig`, `fb`, `tk`, `all`) |
+| Output dir | `--output` | `-o` |
+| Duration | `--duration` | `-d` |
+| Max chunks | `--max-chunks` | `-m` |
+| Smart crop | `--smart-crop / --no-smart-crop` | `--sc / --no-sc` |
+| Flip | `--hflip / --no-hflip` | `--hf / --no-hf` |
+| Keep temp | `--keep-temp` | `--kt` |
+| IMDb fetch | `--fetch-imdb / --no-fetch-imdb` | `--imdb / --no-imdb` |
+| Upload YT | `--upload-youtube / --no-upload-youtube` | `--u-yt / --no-u-yt` |
+| YT title | `--youtube-title` | `--yt-title` |
+| YT desc | `--youtube-description` | `--yt-desc` |
+| YT privacy | `--youtube-privacy` | `--yt-priv` |
+| YT category | `--youtube-category` | `--yt-cat` |
+| YT tags | `--youtube-tags` | `--yt-tags` |
 
 ## Output Structure
 
