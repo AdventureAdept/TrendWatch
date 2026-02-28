@@ -101,14 +101,30 @@ def detect_input_type(video_input: str) -> tuple[str, Path | None]:
         return "file", path
 
 
+# Platform value shortcuts: yt=youtube, ig=instagram, fb=facebook, tk=tiktok
+PLATFORM_ALIASES = {
+    "yt": "youtube",
+    "ig": "instagram",
+    "fb": "facebook",
+    "tk": "tiktok",
+}
+
+def resolve_platform(ctx, param, value):
+    """Resolve platform shorthand aliases."""
+    return PLATFORM_ALIASES.get(value, value)
+
+
 @click.command()
 @click.argument("video_input")
 @click.option(
     "--platform",
     "-p",
-    type=click.Choice(["youtube", "instagram", "facebook", "tiktok", "all"]),
+    type=click.Choice(["youtube", "yt", "instagram", "ig", "facebook", "fb", "tiktok", "tk", "all"]),
     default="all",
-    help="Target platform for output videos",
+    callback=resolve_platform,
+    expose_value=True,
+    is_eager=False,
+    help="Target platform (youtube/yt, instagram/ig, facebook/fb, tiktok/tk, all)",
 )
 @click.option(
     "--output",
@@ -133,52 +149,62 @@ def detect_input_type(video_input: str) -> tuple[str, Path | None]:
 )
 @click.option(
     "--smart-crop/--no-smart-crop",
+    "--sc/--no-sc",
     default=True,
     help="Enable smart cropping with MediaPipe face detection (default: enabled)",
 )
 @click.option(
     "--hflip/--no-hflip",
+    "--hf/--no-hf",
     default=True,
     help="Apply horizontal flip effect to output videos (default: enabled)",
 )
 @click.option(
     "--keep-temp",
+    "--kt",
     is_flag=True,
     help="Keep temporary files after processing",
 )
 @click.option(
     "--fetch-imdb/--no-fetch-imdb",
+    "--imdb/--no-imdb",
     default=True,
     help="Fetch IMDb metadata if filename contains IMDb ID (default: enabled, requires OMDB_API_KEY env var)",
 )
 @click.option(
     "--upload-youtube/--no-upload-youtube",
+    "--u-yt/--no-u-yt",
     default=False,
     help="Upload processed videos to YouTube after transcoding (requires OAuth setup)",
 )
 @click.option(
     "--youtube-title",
+    "--yt-title",
     default="{filename} - Part {n}",
     help="Title template for YouTube uploads. Placeholders: {n}, {filename}, {total}",
 )
 @click.option(
     "--youtube-description",
+    "--yt-desc",
     default="",
     help="Description for YouTube uploads (auto-adds #Shorts tag)",
 )
 @click.option(
     "--youtube-privacy",
+    "--yt-priv",
     type=click.Choice(["public", "unlisted", "private"]),
     default="public",
     help="Privacy status for YouTube uploads",
 )
 @click.option(
     "--youtube-category",
+    "--yt-cat",
     default="24",
     help="YouTube category ID (default: 24=Entertainment). Common: 1=Film, 10=Music, 17=Sports, 20=Gaming, 22=People&Blogs, 24=Entertainment, 27=Education",
 )
 @click.option(
     "--youtube-tags",
+    "--yt-tags",
     default="",
     help="Comma-separated tags for YouTube uploads",
 )
