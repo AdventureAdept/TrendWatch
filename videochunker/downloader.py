@@ -18,14 +18,15 @@ class VideoDownloader:
         """
         self.output_dir = output_dir or tempfile.mkdtemp(prefix="videochunker_")
 
-    def download(self, url: str) -> Path:
+    def download(self, url: str) -> tuple[Path, dict | None]:
         """Download video from URL.
 
         Args:
             url: Video URL to download
 
         Returns:
-            Path to downloaded video file
+            Tuple of (path to downloaded video file, source metadata dict or None).
+            Metadata dict contains 'title', 'description', 'tags' when available.
 
         Raises:
             Exception: If download fails
@@ -43,7 +44,16 @@ class VideoDownloader:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 filename = ydl.prepare_filename(info)
-                return Path(filename)
+
+                source_metadata = None
+                if info and info.get('title'):
+                    source_metadata = {
+                        'title': info.get('title'),
+                        'description': info.get('description') or '',
+                        'tags': info.get('tags') or [],
+                    }
+
+                return Path(filename), source_metadata
         except Exception as e:
             raise Exception(f"Failed to download video: {str(e)}") from e
 

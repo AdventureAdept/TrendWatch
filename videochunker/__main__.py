@@ -231,12 +231,13 @@ def main(
         if input_type == "url":
             # URL mode - download video
             click.echo("📥 Downloading video...")
-            video_path = downloader.download(video_input)
+            video_path, yt_source_metadata = downloader.download(video_input)
             click.echo(f"✅ Downloaded: {video_path.name}\n")
         else:
             # Local file mode - use directly
             click.echo(f"📁 Using local file: {local_path.name}")
             video_path = local_path
+            yt_source_metadata = None
             click.echo()
 
         # Determine video-specific output folder
@@ -341,7 +342,7 @@ def main(
                     has_custom_tags = youtube_tags != ""
 
                     if use_imdb and not (has_custom_title or has_custom_description or has_custom_tags):
-                        # Use IMDb metadata for all videos
+                        # Priority 2: Use IMDb metadata for all videos
                         click.echo(f"🎬 Auto-generating titles, descriptions, and tags from IMDb data")
 
                         # Upload each video with IMDb-generated metadata
@@ -385,8 +386,48 @@ def main(
                                 continue
 
                         click.echo(f"✅ Batch upload complete: {len(results)}/{total} successful\n")
+                    elif yt_source_metadata and not (has_custom_title or has_custom_description or has_custom_tags):
+                        # Priority 3: Use YouTube source video metadata
+                        click.echo(f"📺 Using source video metadata for upload info")
+                        results = []
+                        total = len(youtube_videos)
+                        yt_title = yt_source_metadata['title']
+
+                        # Trim description to YouTube's 5000 char limit, append #Shorts
+                        shorts_suffix = "\n\n#Shorts"
+                        raw_desc = yt_source_metadata.get('description', '')
+                        trimmed_desc = raw_desc[:5000 - len(shorts_suffix)] + shorts_suffix
+
+                        # Cap tags at YouTube's 15-tag limit
+                        yt_tags = yt_source_metadata.get('tags', [])[:15]
+
+                        click.echo(f"\n📺 Starting batch upload: {total} video(s)\n")
+
+                        for i, video_path in enumerate(youtube_videos, start=1):
+                            title = f"{yt_title} - Part {i}"
+                            if len(title) > 100:
+                                title = title[:97] + "..."
+
+                            uploader = YouTubeUploader()
+                            try:
+                                result = uploader.upload_short(
+                                    video_path=video_path,
+                                    title=title,
+                                    description=trimmed_desc,
+                                    tags=yt_tags,
+                                    privacy_status=youtube_privacy
+                                )
+                                results.append(result)
+                                click.echo()
+                            except Exception as e:
+                                click.echo(f"❌ Upload failed: {video_path.name}")
+                                click.echo(f"   Error: {e}\n")
+                                continue
+
+                        click.echo(f"✅ Batch upload complete: {len(results)}/{total} successful\n")
+
                     else:
-                        # Use CLI options (original behavior)
+                        # Priority 4: Use CLI options (original behavior)
                         tags = [tag.strip() for tag in youtube_tags.split(",")] if youtube_tags else []
 
                         # Initialize uploader and upload batch
