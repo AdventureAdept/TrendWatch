@@ -1,6 +1,6 @@
 # Video Chunker
 
-CLI tool that processes videos (from URLs or local files) and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok).
+CLI tool that processes videos (from URLs or local files) and splits them into 60-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok).
 
 ## Table of Contents
 
@@ -24,7 +24,7 @@ CLI tool that processes videos (from URLs or local files) and splits them into 3
 
 - 📥 Download videos from any URL (YouTube, Twitter, etc.) using yt-dlp
 - 📁 Process local video files directly (no download needed)
-- ✂️ Split videos into 30-second chunks (configurable)
+- ✂️ Split videos into 60-second chunks (configurable)
 - 🎨 Transcode to platform-specific formats (9:16 aspect ratio, proper encoding)
 - 🤖 Smart cropping with **MediaPipe face detection**
 - 📱 Support for YouTube, Instagram, Facebook, and TikTok

@@ -47,7 +47,7 @@ def format_metadata_for_youtube(
     total_chunks: int,
     title_template: Optional[str] = None,
     description_override: Optional[str] = None
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """Format IMDb metadata for YouTube upload.
 
     Args:

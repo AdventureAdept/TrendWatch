@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CLI tool that processes videos (from URLs or local files) and splits them into 30-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart cropping with MediaPipe (face detection) or YOLO (person detection) that fills the entire 9:16 screen.
+CLI tool that processes videos (from URLs or local files) and splits them into 60-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart cropping with MediaPipe (face detection) or YOLO (person detection) that fills the entire 9:16 screen.
 
 ## Tech Stack
 
@@ -34,7 +34,7 @@ python -m videochunker <video_input>
 # Options:
 # --platform, -p: Target platform (youtube|instagram|facebook|tiktok|all) [default: all]
 # --output, -o: Output directory [default: ./output]
-# --duration, -d: Chunk duration in seconds [default: 30]
+# --duration, -d: Chunk duration in seconds [default: 60]
 # --max-chunks, -m: Maximum chunks to create [default: 5]
 # --smart-crop/--no-smart-crop: Enable smart cropping with MediaPipe face detection [default: enabled]
 # --hflip/--no-hflip: Apply horizontal flip effect to output videos [default: enabled]
@@ -229,7 +229,6 @@ The tool uses OpenCV's Haar Cascade classifier to detect faces in video frames:
 - `opencv-python`: OpenCV for image processing
 - `mediapipe`: Face detection for smart cropping
 - `click`: CLI framework
-- `requests`: HTTP client for TikTok API calls
 - `google-api-python-client`: YouTube Data API v3 client
 - `google-auth-oauthlib`: OAuth 2.0 authentication for YouTube uploads
 - FFmpeg must be installed system-wide (`apt install ffmpeg` or `brew install ffmpeg`)
