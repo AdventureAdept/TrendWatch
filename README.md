@@ -26,7 +26,7 @@ CLI tool that processes videos (from URLs or local files) and splits them into 6
 - 📁 Process local video files directly (no download needed)
 - ✂️ Split videos into 60-second chunks (configurable)
 - 🎨 Transcode to platform-specific formats (9:16 aspect ratio, proper encoding)
-- 🤖 Smart cropping with **MediaPipe face detection**
+- 🤖 Smart cropping with **MediaPipe face detection** and **YOLOv8 person detection**
 - 📱 Support for YouTube, Instagram, Facebook, and TikTok
 - 📤 **Automated YouTube Shorts upload** with OAuth 2.0 authentication
 
@@ -98,6 +98,7 @@ python -m videochunker "video.mp4" --u-yt --yt-priv unlisted
 | `--youtube-privacy` | `--yt-priv` | Privacy (public/unlisted/private) | `public` | - |
 | `--youtube-category` | `--yt-cat` | Category ID | `24` (Entertainment) | - |
 | `--youtube-tags` | `--yt-tags` | Comma-separated tags | Empty | Genre + Actors + Year |
+| `--upload-only` | `--uo` | Skip processing, upload existing clips (requires `--u-yt`) | Disabled | - |
 
 **Note:** When IMDb metadata is available (filename contains `tt#######`), titles, descriptions, and tags are automatically generated from movie data. CLI options override these defaults.
 
@@ -154,7 +155,8 @@ Download from https://ffmpeg.org/download.html
 
 ```bash
 # Clone repository
-cd video-testing
+git clone https://github.com/AdventureAdept/TrendWatch.git
+cd TrendWatch
 
 # Create virtual environment
 python3 -m venv venv
@@ -250,28 +252,31 @@ python -m videochunker "/movies/inception.mp4" \
 
 ```
 output/
-├── youtube_shorts/
-│   ├── video_chunk_001_youtube_shorts.mp4
-│   ├── video_chunk_002_youtube_shorts.mp4
-│   └── ...
-├── instagram_reels/
-│   ├── video_chunk_001_instagram_reels.mp4
-│   └── ...
-├── facebook_reels/
-│   └── ...
-└── tiktok/
-    └── ...
+└── {video_id}/
+    ├── youtube_shorts/
+    │   ├── video_chunk_001_youtube_shorts.mp4
+    │   ├── video_chunk_002_youtube_shorts.mp4
+    │   └── ...
+    ├── instagram_reels/
+    │   ├── video_chunk_001_instagram_reels.mp4
+    │   └── ...
+    ├── facebook_reels/
+    │   └── ...
+    ├── tiktok/
+    │   └── ...
+    └── youtube_uploads.json  (if --u-yt used)
 ```
 
 ## Smart Cropping
 
-TrendWatch uses **MediaPipe face detection** to intelligently crop videos for vertical format:
+TrendWatch uses a three-stage smart cropping pipeline to intelligently crop videos for vertical format:
 
-- **Best for:** Talking heads, interviews, vlogs, any content with faces
+1. **MediaPipe** (primary): Google's face detection — centers crop on detected faces using eye position for stability
+2. **YOLOv8** (fallback): Person detection when no faces are found — crops to detected person bounding box
+3. **Center crop** (final fallback): Used when neither MediaPipe nor YOLO detect a subject
+
+- **Best for:** Talking heads, interviews, vlogs, action clips with people
 - **Speed:** Fast with high accuracy
-- **Technology:** Google's MediaPipe face detection
-- **Strategy:** Centers crop on detected faces using eye position for stability
-- **Fallback:** Automatically uses center crop if no faces detected
 
 ```bash
 # Smart cropping is enabled by default

@@ -208,6 +208,13 @@ def resolve_platform(ctx, param, value):
     default="",
     help="Comma-separated tags for YouTube uploads",
 )
+@click.option(
+    "--upload-only",
+    "--uo",
+    is_flag=True,
+    default=False,
+    help="Skip processing and upload existing clips from the output directory",
+)
 def main(
     video_input: str,
     platform: PlatformType,
@@ -224,13 +231,110 @@ def main(
     youtube_privacy: str,
     youtube_category: str,
     youtube_tags: str,
+    upload_only: bool,
 ):
     """Split videos from URLs or local files into platform-specific reels.
 
     VIDEO_INPUT can be:
       - YouTube URL: https://youtube.com/watch?v=...
       - Local file path: /path/to/video.mp4 or ./video.mkv
+      - Folder path (with --upload-only): output/Voz2OVsKbQY or output/Voz2OVsKbQY/youtube_shorts
     """
+    # --upload-only: skip all processing, just upload existing clips
+    if upload_only:
+        if not upload_youtube:
+            click.echo("❌ --upload-only requires --u-yt", err=True)
+            raise click.Abort()
+
+        # Resolve youtube_shorts directory from input
+        input_path = Path(video_input)
+        if input_path.is_dir():
+            # Direct folder path provided
+            if input_path.name == "youtube_shorts":
+                youtube_dir = input_path
+                output_dir = input_path.parent
+            else:
+                output_dir = input_path
+                youtube_dir = input_path / "youtube_shorts"
+            folder_name = output_dir.name
+        else:
+            # URL or filename — derive folder the same way as normal processing
+            base_output_dir = Path(output)
+            yt_id = extract_youtube_id(video_input)
+            imdb_id = extract_imdb_id(video_input)
+            folder_name = imdb_id or yt_id or input_path.stem
+            output_dir = base_output_dir / folder_name
+            youtube_dir = output_dir / "youtube_shorts"
+
+        if not youtube_dir.exists():
+            click.echo(f"❌ No existing clips found at: {youtube_dir}", err=True)
+            raise click.Abort()
+
+        youtube_videos = sorted(youtube_dir.glob("*.mp4"))
+        if not youtube_videos:
+            click.echo(f"❌ No .mp4 files found in: {youtube_dir}", err=True)
+            raise click.Abort()
+
+        click.echo(f"📤 Upload-only mode: {len(youtube_videos)} clip(s) from {youtube_dir}\n")
+
+        try:
+            from .youtube_uploader import YouTubeUploader, format_metadata_for_youtube
+
+            imdb_metadata = None
+            imdb_metadata_file = output_dir / f"{folder_name}_metadata.json"
+            if imdb_metadata_file.exists():
+                with open(imdb_metadata_file, 'r') as f:
+                    imdb_metadata = json.load(f)
+                click.echo("📊 Using IMDb metadata for upload info")
+
+            has_custom_title = youtube_title != "{filename} - Part {n}"
+            has_custom_description = youtube_description != ""
+            has_custom_tags = youtube_tags != ""
+
+            tags = [t.strip() for t in youtube_tags.split(",")] if youtube_tags else []
+            uploader = YouTubeUploader()
+            total = len(youtube_videos)
+            results = []
+
+            click.echo(f"📺 Starting batch upload: {total} video(s)\n")
+            for i, vp in enumerate(youtube_videos, start=1):
+                if imdb_metadata and not (has_custom_title or has_custom_description or has_custom_tags):
+                    meta = format_metadata_for_youtube(imdb_metadata, i, total)
+                    title, description, upload_tags = meta['title'], meta['description'], meta['tags']
+                else:
+                    filename = vp.stem.replace('_youtube_shorts', '')
+                    title = youtube_title.format(n=str(i).zfill(3), filename=filename, total=total)
+                    description = youtube_description
+                    upload_tags = tags
+
+                try:
+                    result = uploader.upload_short(
+                        video_path=vp,
+                        title=title,
+                        description=description,
+                        tags=upload_tags,
+                        privacy_status=youtube_privacy,
+                        category_id=youtube_category,
+                    )
+                    results.append(result)
+                    click.echo()
+                except Exception as e:
+                    click.echo(f"❌ Upload failed: {vp.name}\n   Error: {e}\n")
+
+            click.echo(f"✅ Batch upload complete: {len(results)}/{total} successful\n")
+            if results:
+                metadata_path = output_dir / "youtube_uploads.json"
+                uploader.save_upload_metadata(results, metadata_path)
+
+        except ValueError as e:
+            click.echo(f"⚠️  YouTube upload skipped: {e}\n", err=True)
+        except Exception as e:
+            click.echo(f"❌ YouTube upload failed: {e}\n", err=True)
+
+        click.echo("🎉 Done!")
+        click.echo(f"📁 Output directory: {output_dir.absolute()}")
+        return
+
     # Detect input type
     try:
         input_type, local_path = detect_input_type(video_input)
@@ -332,6 +436,7 @@ def main(
         # Step 4: Transcode for platforms
         platforms = get_all_platforms() if platform == "all" else [platform]
 
+        youtube_transcoded_paths = []
         for platform_name in platforms:
             platform_spec = get_platform_spec(platform_name)
             click.echo(f"🎨 Transcoding for {platform_spec.name}...")
@@ -339,6 +444,9 @@ def main(
             transcoded_paths = transcoder.transcode_all(
                 chunk_paths, output_dir, platform_spec
             )
+
+            if platform_name == "youtube":
+                youtube_transcoded_paths = transcoded_paths
 
             click.echo(f"✅ Created {len(transcoded_paths)} videos for {platform_spec.name}")
             click.echo(f"   Output: {transcoded_paths[0].parent}\n")
@@ -348,9 +456,8 @@ def main(
             try:
                 from .youtube_uploader import YouTubeUploader, format_metadata_for_youtube
 
-                # Get YouTube Shorts videos
-                youtube_dir = output_dir / "youtube_shorts"
-                youtube_videos = sorted(youtube_dir.glob("*.mp4"))
+                # Use only the videos transcoded in this run
+                youtube_videos = sorted(youtube_transcoded_paths)
 
                 if youtube_videos:
                     # Check if IMDb metadata exists
