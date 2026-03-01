@@ -11,7 +11,7 @@ import pickle
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import Any, List, Optional, Dict
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
