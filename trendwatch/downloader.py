@@ -16,7 +16,7 @@ class VideoDownloader:
         Args:
             output_dir: Directory to save downloaded videos. If None, uses temp directory.
         """
-        self.output_dir = output_dir or tempfile.mkdtemp(prefix="videochunker_")
+        self.output_dir = output_dir or tempfile.mkdtemp(prefix="trendwatch_")
 
     def download(self, url: str) -> tuple[Path, dict | None]:
         """Download video from URL.

@@ -59,9 +59,9 @@ temp/
 *.pt
 *.gguf
 *.bin
-videochunker/models/*.gguf
-videochunker/models/*.bin
-videochunker/models/sentence-transformer/
+trendwatch/models/*.gguf
+trendwatch/models/*.bin
+trendwatch/models/sentence-transformer/
 
 # YouTube OAuth credentials and tokens
 .trendwatch/

@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CLI tool that processes videos (from URLs or local files) and splits them into 60-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart cropping with MediaPipe (face detection) or YOLO (person detection) that fills the entire 9:16 screen.
+CLI tool that processes videos (from URLs or local files) and splits them into 60-second chunks optimized for social media reels (YouTube Shorts, Instagram Reels, Facebook Reels, TikTok). Features smart cropping with MediaPipe face detection that fills the entire 9:16 screen.
 
 See [README.md](README.md) for full usage docs, platform specs, and YouTube upload setup.
 
 ## Tech Stack
 
 - Python 3.10+
-- FFmpeg (system dependency, called via subprocess or ffmpeg-python)
+- FFmpeg (system dependency, called via subprocess)
 - OpenCV (opencv-python) for image processing
 - Click for CLI
 
@@ -26,12 +26,12 @@ pip install -r requirements.txt
 
 # Run CLI (default: first 5 chunks, all platforms)
 # Input can be a URL or local file path
-python3 -m videochunker <video_input>
+python3 -m trendwatch <video_input>
 
 # Examples:
-# python3 -m videochunker "https://youtube.com/watch?v=..."
-# python3 -m videochunker "/path/to/video.mp4"
-# python3 -m videochunker "./my-video.mkv"
+# python3 -m trendwatch "https://youtube.com/watch?v=..."
+# python3 -m trendwatch "/path/to/video.mp4"
+# python3 -m trendwatch "./my-video.mkv"
 
 # Options (long / short alias):
 # --platform, -p: Target platform [default: all]
@@ -49,7 +49,13 @@ python3 -m videochunker <video_input>
 # --youtube-privacy (--yt-priv): Privacy status (public|unlisted|private) [default: public]
 # --youtube-category (--yt-cat): Category ID [default: 24 (Entertainment)]
 # --youtube-tags (--yt-tags): Comma-separated tags [default: ""]
-# --upload-only (--uo): Skip processing, upload existing clips from output dir (requires --u-yt)
+# --upload-facebook/--no-upload-facebook (--u-fb/--no-u-fb): Upload to Facebook Reels [default: disabled]
+# --upload-instagram/--no-upload-instagram (--u-ig/--no-u-ig): Upload to Instagram Reels [default: disabled]
+# --meta-title (--mt): Title/caption template [default: "{filename} - Part {n}"]
+# --meta-description (--md): Description/caption text [default: ""]
+# --meta-tags (--mtags): Comma-separated hashtags [default: ""]
+# --meta-privacy (--mp): Facebook privacy (public|friends|only_me) [default: public]
+# --upload-only (--uo): Skip processing, upload existing clips from output dir (requires --u-yt, --u-fb, or --u-ig)
 
 # Supported video formats: MP4, MKV, AVI, MOV, WebM, FLV, WMV, M4V
 
@@ -63,7 +69,7 @@ ruff check .
 ## Architecture
 
 ```
-videochunker/
+trendwatch/
 ├── __main__.py          # CLI entry point
 ├── downloader.py        # Download video from URL (yt-dlp)
 ├── chunker.py           # Split video into fixed-duration segments
@@ -71,13 +77,16 @@ videochunker/
 ├── transcoder.py        # Platform-specific encoding (aspect ratio, bitrate, codec)
 ├── platforms.py         # Platform specs and presets
 ├── youtube_uploader.py  # YouTube Data API v3 client with OAuth 2.0
+├── meta_uploader.py     # Meta Graph API client for Facebook/Instagram Reels
 └── omdb.py              # OMDb API client for IMDb metadata
 ```
 
 ## Key Notes
 
-- OAuth credentials: `~/.trendwatch/client_secrets.json`
-- Token cache: `~/.trendwatch/youtube_token.pickle`
-- MediaPipe model: `videochunker/models/face_detection_short_range.tflite`
+- YouTube OAuth credentials: `~/.trendwatch/client_secrets.json`
+- YouTube token cache: `~/.trendwatch/youtube_token.pickle`
+- Credentials .env: `~/.trendwatch/.env` (META_ACCESS_TOKEN, META_PAGE_ID, META_IG_USER_ID, OMDB_API_KEY)
+- MediaPipe model: `trendwatch/models/face_detection_short_range.tflite`
 - Output path: `output/{video_id}/{platform}/`
-- Upload results: `output/{video_id}/youtube_uploads.json`
+- Upload results: `output/{video_id}/youtube_uploads.json`, `facebook_uploads.json`, `instagram_uploads.json`
+
