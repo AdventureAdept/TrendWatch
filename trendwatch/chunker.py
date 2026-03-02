@@ -59,6 +59,9 @@ class VideoChunker:
         Raises:
             Exception: If chunking fails
         """
+        if self.chunk_duration <= 0:
+            raise ValueError(f"chunk_duration must be positive, got {self.chunk_duration}")
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Get total duration
