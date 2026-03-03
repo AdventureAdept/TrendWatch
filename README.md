@@ -19,6 +19,7 @@ CLI tool that processes videos (from URLs or local files) and splits them into 6
   - [Meta Quick Start](#meta-quick-start)
   - [Meta Upload Examples](#meta-upload-examples)
   - [Meta Upload Options](#meta-upload-options)
+- [IMDb Metadata](#imdb-metadata)
 - [Smart Cropping](#smart-cropping)
 - [Platform Specifications](#platform-specifications)
 - [Development](#development)
@@ -29,8 +30,9 @@ CLI tool that processes videos (from URLs or local files) and splits them into 6
 - 📥 Download videos from any URL (YouTube, Twitter, etc.) using yt-dlp
 - 📁 Process local video files directly (no download needed)
 - ✂️ Split videos into 60-second chunks (configurable)
-- 🎨 Transcode to platform-specific formats (9:16 aspect ratio, proper encoding)
+- 🎨 Transcode to platform-specific formats (9:16 aspect ratio, proper encoding) — **FFmpeg runs once** regardless of how many platforms are selected; other platform folders are populated by file copy
 - 🤖 Smart cropping with **MediaPipe face detection**
+- 🎬 **IMDb metadata auto-generation** — fetches title, plot, cast, rating, and genres from OMDb API when the filename contains an IMDb ID (`tt#######`)
 - 📱 Support for YouTube, Instagram, Facebook, and TikTok
 - 📤 **Automated YouTube Shorts upload** with OAuth 2.0 authentication
 - 📘 **Automated Facebook Reels upload** via Meta Graph API
@@ -125,7 +127,7 @@ python3 -m trendwatch "VIDEO_INPUT" -m 10
 python3 -m trendwatch "VIDEO_INPUT" --no-sc
 ```
 
-### Keep temporary files:
+### Keep temporary files (raw chunks):
 ```bash
 python3 -m trendwatch "VIDEO_INPUT" --kt
 ```
@@ -146,7 +148,7 @@ python3 -m trendwatch "/movies/inception.mp4" \
 | Max chunks | `--max-chunks` | `-m` |
 | Smart crop | `--smart-crop / --no-smart-crop` | `--sc / --no-sc` |
 | Flip | `--hflip / --no-hflip` | `--hf / --no-hf` |
-| Keep temp | `--keep-temp` | `--kt` |
+| Keep temp | `--keep-temp` (keeps `chunks/` dir) | `--kt` |
 | IMDb fetch | `--fetch-imdb / --no-fetch-imdb` | `--imdb / --no-imdb` |
 | Upload YT | `--upload-youtube / --no-upload-youtube` | `--u-yt / --no-u-yt` |
 | YT title | `--youtube-title` | `--yt-title` |
@@ -164,23 +166,32 @@ python3 -m trendwatch "/movies/inception.mp4" \
 
 ## Output Structure
 
+The top-level folder name (`{video_id}`) is chosen automatically:
+1. IMDb ID from the filename (e.g. `tt1856101`)
+2. YouTube video ID from the URL (e.g. `dQw4w9WgXcQ`)
+3. Input filename stem as a fallback
+
 ```
 output/
 └── {video_id}/
+    ├── chunks/                              (deleted after processing unless --kt)
+    │   ├── {stem}_chunk_001.mp4
+    │   └── ...
     ├── youtube_shorts/
-    │   ├── video_chunk_001_youtube_shorts.mp4
-    │   ├── video_chunk_002_youtube_shorts.mp4
+    │   ├── {stem}_chunk_001_youtube_shorts.mp4
+    │   ├── {stem}_chunk_002_youtube_shorts.mp4
     │   └── ...
     ├── instagram_reels/
-    │   ├── video_chunk_001_instagram_reels.mp4
+    │   ├── {stem}_chunk_001_instagram_reels.mp4
     │   └── ...
     ├── facebook_reels/
     │   └── ...
     ├── tiktok/
     │   └── ...
-    ├── youtube_uploads.json    (if --u-yt used)
-    ├── facebook_uploads.json   (if --u-fb used)
-    └── instagram_uploads.json  (if --u-ig used)
+    ├── {video_id}_metadata.json    (if IMDb ID found in filename)
+    ├── youtube_uploads.json        (if --u-yt used)
+    ├── facebook_uploads.json       (if --u-fb used)
+    └── instagram_uploads.json      (if --u-ig used)
 ```
 
 ## YouTube Upload Integration
@@ -253,7 +264,12 @@ python3 -m trendwatch "video.mp4" --u-yt --yt-priv unlisted
 | `--youtube-tags` | `--yt-tags` | Comma-separated tags | Empty | Genre + Actors + Year |
 | `--upload-only` | `--uo` | Skip processing, upload existing clips (works with `--u-yt`, `--u-fb`, `--u-ig`) | Disabled | - |
 
-**Note:** When IMDb metadata is available (filename contains `tt#######`), titles, descriptions, and tags are automatically generated from movie data. CLI options override these defaults.
+**Metadata priority** (highest wins):
+1. IMDb metadata (if filename contains `tt#######`) — auto-generates title, description, tags from movie data
+2. YouTube source metadata (if input was a YouTube URL) — uses source video title, description, and tags
+3. CLI `--yt-*` options — used exactly as provided
+
+CLI options always override IMDb/source metadata when explicitly set.
 
 ### API Quotas
 
@@ -385,6 +401,47 @@ Upload results are saved to:
 - `{output_dir}/instagram_uploads.json`
 
 
+## IMDb Metadata
+
+When the input filename contains an IMDb ID (`tt` followed by 7–8 digits), TrendWatch automatically fetches movie/show metadata from the OMDb API and uses it to generate upload titles, descriptions, and tags for YouTube, Facebook, and Instagram — no manual metadata entry needed.
+
+**Data fetched:** Title, Year, Plot (full), Director, Actors, Genre, IMDb Rating, Runtime, Type (movie/series)
+
+**Saved to:** `output/{video_id}/{video_id}_metadata.json`
+
+### Setup
+
+1. Get a free API key from http://www.omdbapi.com/apikey.aspx
+2. Add to `~/.trendwatch/.env`:
+   ```
+   OMDB_API_KEY=your_key_here
+   ```
+   (This is the same `.env` file used for Meta credentials)
+
+### Usage
+
+- Enabled by default — just name your file with the IMDb ID: `tt1856101.mkv`
+- The ID can appear anywhere in the name: `movie_tt1856101_1080p.mp4` also works
+- Disable with `--no-imdb` if not needed
+- Silently skipped if `OMDB_API_KEY` is not set
+
+### Example
+
+```bash
+python3 -m trendwatch "tt1856101.mkv" --u-yt --u-fb --u-ig
+# Automatically generates for all upload platforms:
+# Title:       "Blade Runner 2049 (2017) - Part 001"
+# Description: Full plot + IMDb rating + director
+# Tags/hashtags: genres, lead actors, year
+```
+
+### Options
+
+| Option | Short | Default |
+|--------|-------|---------|
+| `--fetch-imdb / --no-fetch-imdb` | `--imdb / --no-imdb` | Enabled (skips silently if no API key) |
+
+
 ## Smart Cropping
 
 TrendWatch uses a two-stage smart cropping pipeline to intelligently crop videos for vertical format:
@@ -411,12 +468,14 @@ Features:
 
 ## Platform Specifications
 
-| Platform  | Aspect Ratio | Max Duration | Resolution | Format |
-|-----------|--------------|--------------|------------|--------|
-| YouTube   | 9:16         | 3 min        | 1080x1920  | MP4/H.264 |
-| Instagram | 9:16         | 90s          | 1080x1920  | MP4/H.264 |
-| Facebook  | 9:16         | 90s          | 1080x1920  | MP4/H.264 |
-| TikTok    | 9:16         | 10 min       | 1080x1920  | MP4/H.264 |
+All platforms share identical encoding settings (1080x1920, H.264, AAC, 8 Mbps). FFmpeg runs once and the output is copied into each selected platform's folder.
+
+| Platform  | Aspect Ratio | Max Duration | Resolution | Auto-Upload |
+|-----------|--------------|--------------|------------|-------------|
+| YouTube   | 9:16         | 3 min        | 1080x1920  | ✅ `--u-yt` |
+| Instagram | 9:16         | 90s          | 1080x1920  | ✅ `--u-ig` |
+| Facebook  | 9:16         | 90s          | 1080x1920  | ✅ `--u-fb` |
+| TikTok    | 9:16         | 10 min       | 1080x1920  | — |
 
 ## Development
 
