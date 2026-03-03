@@ -34,8 +34,9 @@ python3 -m trendwatch <video_input>
 # python3 -m trendwatch "./my-video.mkv"
 
 # Options (long / short alias):
-# --platform, -p: Target platform [default: all]
+# --platform, -p: Target platform(s) [default: all]
 #   Values: youtube/yt, instagram/ig, facebook/fb, tiktok/tk, all
+#   Repeatable: -p yt -p ig  OR  comma-separated: -p yt,ig,fb
 # --output, -o: Output directory [default: ./output]
 # --duration, -d: Chunk duration in seconds [default: 60]
 # --max-chunks, -m: Maximum chunks to create [default: 5]

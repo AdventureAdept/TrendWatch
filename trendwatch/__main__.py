@@ -55,6 +55,12 @@ def extract_youtube_id(url: str) -> str | None:
     return None
 
 
+def extract_chunk_number(filename: str) -> int | None:
+    """Extract chunk number from filename like 'tt1856101_chunk_011_youtube_shorts.mp4'."""
+    match = re.search(r'_chunk_(\d+)', filename)
+    return int(match.group(1)) if match else None
+
+
 def extract_imdb_id(filename: str) -> str | None:
     """Extract IMDb ID from filename.
 
@@ -112,9 +118,25 @@ PLATFORM_ALIASES = {
     "tk": "tiktok",
 }
 
+VALID_PLATFORMS = {"youtube", "yt", "instagram", "ig", "facebook", "fb", "tiktok", "tk", "all"}
+
 def resolve_platform(ctx, param, value):
-    """Resolve platform shorthand aliases."""
-    return PLATFORM_ALIASES.get(value, value)
+    """Resolve platform shorthand aliases. Supports comma-separated and repeated flags."""
+    if not value:
+        return ("all",)
+    # Split comma-separated values, then resolve aliases
+    parts = []
+    for v in value:
+        parts.extend(v.split(","))
+    resolved = []
+    for p in parts:
+        p = p.strip().lower()
+        if p not in VALID_PLATFORMS:
+            raise click.BadParameter(
+                f"'{p}' is not a valid platform. Choose from: youtube/yt, instagram/ig, facebook/fb, tiktok/tk, all"
+            )
+        resolved.append(PLATFORM_ALIASES.get(p, p))
+    return tuple(dict.fromkeys(resolved))
 
 
 @click.command()
@@ -122,12 +144,11 @@ def resolve_platform(ctx, param, value):
 @click.option(
     "--platform",
     "-p",
-    type=click.Choice(["youtube", "yt", "instagram", "ig", "facebook", "fb", "tiktok", "tk", "all"]),
-    default="all",
+    multiple=True,
     callback=resolve_platform,
     expose_value=True,
     is_eager=False,
-    help="Target platform (youtube/yt, instagram/ig, facebook/fb, tiktok/tk, all)",
+    help="Target platform(s) — repeatable (e.g. -p yt -p ig). Values: youtube/yt, instagram/ig, facebook/fb, tiktok/tk, all. Default: all",
 )
 @click.option(
     "--output",
@@ -257,7 +278,7 @@ def resolve_platform(ctx, param, value):
 )
 def main(
     video_input: str,
-    platform: PlatformType,
+    platform: tuple[str, ...],
     output: str,
     duration: int,
     max_chunks: int,
@@ -341,12 +362,13 @@ def main(
 
                         click.echo(f"📺 Starting batch upload: {total} video(s)\n")
                         for i, vp in enumerate(youtube_videos, start=1):
+                            chunk_num = extract_chunk_number(vp.name) or i
                             if imdb_metadata and not (has_custom_title or has_custom_description or has_custom_tags):
-                                meta = format_metadata_for_youtube(imdb_metadata, i, total)
+                                meta = format_metadata_for_youtube(imdb_metadata, chunk_num, total)
                                 title, description, upload_tags = meta['title'], meta['description'], meta['tags']
                             else:
                                 filename = vp.stem.replace('_youtube_shorts', '')
-                                title = youtube_title.format(n=str(i).zfill(3), filename=filename, total=total)
+                                title = youtube_title.format(n=str(chunk_num).zfill(3), filename=filename, total=total)
                                 description = youtube_description
                                 upload_tags = tags
 
@@ -401,7 +423,8 @@ def main(
                             total = len(fb_videos)
                             fb_results = []
                             for i, vp in enumerate(fb_videos, start=1):
-                                yt_meta = format_metadata_for_youtube(imdb_metadata, i, total)
+                                chunk_num = extract_chunk_number(vp.name) or i
+                                yt_meta = format_metadata_for_youtube(imdb_metadata, chunk_num, total)
                                 try:
                                     result = meta_uploader.upload_facebook_reel(
                                         video_path=vp,
@@ -457,7 +480,8 @@ def main(
                             total = len(ig_videos)
                             ig_results = []
                             for i, vp in enumerate(ig_videos, start=1):
-                                yt_meta = format_metadata_for_youtube(imdb_metadata, i, total)
+                                chunk_num = extract_chunk_number(vp.name) or i
+                                yt_meta = format_metadata_for_youtube(imdb_metadata, chunk_num, total)
                                 caption = yt_meta['title']
                                 if yt_meta['description']:
                                     caption += "\n\n" + yt_meta['description']
@@ -498,7 +522,7 @@ def main(
         raise click.Abort()
 
     click.echo(f"🎬 Video Chunker - Processing: {video_input}")
-    click.echo(f"📱 Target platform(s): {platform}")
+    click.echo(f"📱 Target platform(s): {', '.join(platform)}")
     click.echo(f"⏱️  Chunk duration: {duration}s")
     click.echo(f"📊 Max chunks: {max_chunks}")
     if smart_crop:
@@ -589,7 +613,7 @@ def main(
         click.echo(f"✅ Created {len(chunk_paths)} chunks\n")
 
         # Step 4: Transcode for platforms
-        platforms = get_all_platforms() if platform == "all" else [platform]
+        platforms = get_all_platforms() if "all" in platform else list(dict.fromkeys(platform))
 
         youtube_transcoded_paths = []
         facebook_transcoded_paths = []
@@ -652,10 +676,11 @@ def main(
                         click.echo(f"\n📺 Starting batch upload: {total} video(s)\n")
 
                         for i, video_path in enumerate(youtube_videos, start=1):
+                            chunk_num = extract_chunk_number(video_path.name) or i
                             # Generate metadata for this chunk
                             metadata = format_metadata_for_youtube(
                                 imdb_metadata,
-                                chunk_number=i,
+                                chunk_number=chunk_num,
                                 total_chunks=total,
                                 title_template=youtube_title if has_custom_title else None,
                                 description_override=youtube_description if has_custom_description else None
@@ -704,7 +729,8 @@ def main(
                         click.echo(f"\n📺 Starting batch upload: {total} video(s)\n")
 
                         for i, video_path in enumerate(youtube_videos, start=1):
-                            title = f"{yt_title} - Part {i}"
+                            chunk_num = extract_chunk_number(video_path.name) or i
+                            title = f"{yt_title} - Part {chunk_num}"
                             if len(title) > 100:
                                 title = title[:97] + "..."
 
@@ -778,7 +804,8 @@ def main(
                         total = len(fb_videos)
                         fb_results = []
                         for i, vp in enumerate(fb_videos, start=1):
-                            yt_meta = format_metadata_for_youtube(imdb_metadata, i, total)
+                            chunk_num = extract_chunk_number(vp.name) or i
+                            yt_meta = format_metadata_for_youtube(imdb_metadata, chunk_num, total)
                             try:
                                 result = meta_uploader.upload_facebook_reel(
                                     video_path=vp,
@@ -799,7 +826,8 @@ def main(
                         total = len(fb_videos)
                         fb_results = []
                         for i, vp in enumerate(fb_videos, start=1):
-                            title = f"{yt_title} - Part {i}"
+                            chunk_num = extract_chunk_number(vp.name) or i
+                            title = f"{yt_title} - Part {chunk_num}"
                             if len(title) > 255:
                                 title = title[:252] + "..."
                             try:
@@ -853,7 +881,8 @@ def main(
                         total = len(ig_videos)
                         ig_results = []
                         for i, vp in enumerate(ig_videos, start=1):
-                            yt_meta = format_metadata_for_youtube(imdb_metadata, i, total)
+                            chunk_num = extract_chunk_number(vp.name) or i
+                            yt_meta = format_metadata_for_youtube(imdb_metadata, chunk_num, total)
                             # Combine title + description + hashtags into caption
                             caption = yt_meta['title']
                             if yt_meta['description']:
@@ -877,7 +906,8 @@ def main(
                         total = len(ig_videos)
                         ig_results = []
                         for i, vp in enumerate(ig_videos, start=1):
-                            caption = f"{yt_title} - Part {i}"
+                            chunk_num = extract_chunk_number(vp.name) or i
+                            caption = f"{yt_title} - Part {chunk_num}"
                             if yt_tags:
                                 caption += "\n\n" + " ".join(f"#{t}" for t in yt_tags)
                             try:

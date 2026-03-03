@@ -352,9 +352,14 @@ class YouTubeUploader:
             # Extract filename without extension
             filename = video_path.stem.replace('_youtube_shorts', '')
 
+            # Use chunk number from filename if available, else enumeration index
+            import re
+            chunk_match = re.search(r'_chunk_(\d+)', video_path.stem)
+            chunk_num = int(chunk_match.group(1)) if chunk_match else i
+
             # Format title with template
             title = title_template.format(
-                n=str(i).zfill(3),
+                n=str(chunk_num).zfill(3),
                 filename=filename,
                 total=total
             )

@@ -92,15 +92,17 @@ python3 -m trendwatch "./my-video.mkv"
 
 **Supported video formats:** MP4, MKV, AVI, MOV, WebM, FLV, WMV, M4V
 
-### Specify a platform:
+### Specify platform(s):
 ```bash
-# Long form
+# Single platform
 python3 -m trendwatch "https://youtube.com/watch?v=..." --platform youtube
-
-# Short form (yt, ig, fb, tk)
 python3 -m trendwatch "https://youtube.com/watch?v=..." -p yt
-python3 -m trendwatch "/home/user/video.mp4" -p ig
-python3 -m trendwatch "./video.mkv" -p fb
+
+# Multiple platforms (comma-separated)
+python3 -m trendwatch "/home/user/video.mp4" -p yt,ig,fb
+
+# Multiple platforms (repeated flag)
+python3 -m trendwatch "./video.mkv" -p yt -p ig -p fb
 ```
 
 ### Custom output directory:
@@ -131,14 +133,14 @@ python3 -m trendwatch "VIDEO_INPUT" --kt
 ### Complete example with all options:
 ```bash
 python3 -m trendwatch "/movies/inception.mp4" \
-  -p tk -d 15 -m 10 --sc -o ./my-reels
+  -p yt,ig,fb -d 15 -m 10 --sc -o ./my-reels
 ```
 
 ### CLI Quick Reference
 
 | Option | Long Form | Short |
 |--------|-----------|-------|
-| Platform | `--platform` | `-p` (values: `yt`, `ig`, `fb`, `tk`, `all`) |
+| Platform | `--platform` | `-p` (values: `yt`, `ig`, `fb`, `tk`, `all` — repeatable/comma-separated) |
 | Output dir | `--output` | `-o` |
 | Duration | `--duration` | `-d` |
 | Max chunks | `--max-chunks` | `-m` |

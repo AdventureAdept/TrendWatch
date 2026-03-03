@@ -1,6 +1,6 @@
 # TrendWatch - Progress Update
 
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-03
 
 ## Original Goal
 
@@ -46,7 +46,7 @@ Build a CLI tool that downloads videos from YouTube URLs and splits them into 30
 - Instagram Reels (9:16, 1080x1920, 90s max)
 - Facebook Reels (9:16, 1080x1920, **90s max** - updated from 60s)
 - TikTok (9:16, 1080x1920, 60s max)
-- Can target a single platform (`-p youtube`) or all at once (`-p all`).
+- Can target one or more platforms (`-p yt,ig,fb` or `-p yt -p ig`) or all at once (`-p all`).
 
 ### 7. Horizontal flip effect - DONE
 - Enabled by default, toggleable with `--hflip/--no-hflip`.
@@ -187,6 +187,8 @@ New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
 | Facebook Reels upload | Done |
 | Instagram Reels upload | Done |
 | Upload-only mode | Done |
+| Multi-platform `-p` selection | Done |
+| Chunk-based part numbers | Done |
 | **Overall** | **Complete - all features working** |
 
 ---
@@ -200,6 +202,15 @@ New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
 ✅ **Instagram Reels upload** - Meta Graph API, catbox.moe relay for public URL
 ✅ **IMDb metadata** - Auto-titles, descriptions, tags from OMDb API
 ✅ **Upload-only mode** - Re-upload existing clips without reprocessing
+✅ **Multi-platform `-p`** - Select multiple platforms: `-p yt,ig,fb` or `-p yt -p ig`
+✅ **Chunk-based part numbers** - Part numbers in titles match chunk numbers from filenames
+
+### Session 5 (2026-03-03): Multi-Platform Selection & Chunk-Based Part Numbers
+
+| What | Detail |
+|------|--------|
+| Multi-platform `-p` flag | `-p` now accepts multiple values: `-p yt,ig,fb` (comma-separated) or `-p yt -p ig -p fb` (repeated). Default: all |
+| Chunk-based part numbers | Upload part numbers now match the chunk number from the filename (e.g., `_chunk_011` → "Part 011") instead of sequential enumeration index |
 
 ## Optional Future Enhancements
 

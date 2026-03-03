@@ -82,12 +82,14 @@ class VideoChunker:
             output_path = output_dir / f"{input_stem}_chunk_{i+1:03d}.mp4"
 
             # Use FFmpeg to extract chunk
+            # -ss before -i = input seeking (keyframe-accurate, ensures codec
+            # parameters are present in the output even with stream copy)
             cmd = [
                 "ffmpeg",
-                "-i",
-                str(input_path),
                 "-ss",
                 str(start_time),
+                "-i",
+                str(input_path),
                 "-t",
                 str(self.chunk_duration),
                 "-c",

@@ -211,8 +211,11 @@ class MetaUploader:
 
         for i, video_path in enumerate(video_paths, start=1):
             filename = video_path.stem.replace("_facebook_reels", "")
+            import re
+            chunk_match = re.search(r'_chunk_(\d+)', video_path.stem)
+            chunk_num = int(chunk_match.group(1)) if chunk_match else i
             title = title_template.format(
-                n=str(i).zfill(3), filename=filename, total=total
+                n=str(chunk_num).zfill(3), filename=filename, total=total
             )
 
             try:
@@ -421,8 +424,11 @@ class MetaUploader:
 
         for i, video_path in enumerate(video_paths, start=1):
             filename = video_path.stem.replace("_instagram_reels", "")
+            import re
+            chunk_match = re.search(r'_chunk_(\d+)', video_path.stem)
+            chunk_num = int(chunk_match.group(1)) if chunk_match else i
             caption = caption_template.format(
-                n=str(i).zfill(3), filename=filename, total=total
+                n=str(chunk_num).zfill(3), filename=filename, total=total
             )
 
             try:
