@@ -1,6 +1,6 @@
 # TrendWatch - Progress Update
 
-**Last Updated:** 2026-03-03 (Session 6)
+**Last Updated:** 2026-03-05 (Session 7)
 
 ## Original Goal
 
@@ -86,86 +86,19 @@ python3 -m trendwatch ./input/vid.mkv -p facebook
 ## Recent Improvements
 
 ### Session 1 (2026-02-08): MediaPipe Upgrade
-| What | Before | After |
-|------|--------|-------|
-| Face detection engine | OpenCV Haar Cascade | MediaPipe (Google) |
-| Detection accuracy | ~60-70% | ~95%+ |
-| Crop alignment | Broken (dimension scaling bug) | Fixed |
-| Frames analyzed per chunk | 1 (middle only) | 3 (25%, 50%, 75%) |
-| Crop centering | Bounding box center | Eye keypoints, confidence-weighted |
-| Error handling | Silent exceptions | Logged warnings with fallback |
-| Resource management | None | Context manager pattern |
+Replaced OpenCV Haar Cascade with MediaPipe face detection (~60% → ~95% accuracy). Added multi-frame sampling (3 frames), eye-keypoint centering, confidence weighting, and context manager pattern.
 
 ### Session 2 (2026-02-14): Local File Support
-| What | Before | After |
-|------|--------|-------|
-| Input types | YouTube URLs only | URLs + local file paths |
-| Facebook Reels duration | 60s max | 90s max |
+Added local file input (URL + file path auto-detection). Updated Facebook Reels max duration to 90s.
 
 ### Session 3 (2026-03-02): YouTube Upload + IMDb Metadata
-| What | Detail |
-|------|--------|
-| YouTube Shorts upload | OAuth 2.0 desktop flow via `youtube_uploader.py` |
-| IMDb metadata | OMDb API lookup when filename contains `tt#######` |
-| Auto-titles | `{filename} - Part {n}` or IMDb title + year |
-| Auto-tags | Genre + cast + year from IMDb |
-| Short CLI aliases | `--u-yt`, `--yt-title`, `--yt-desc`, `--yt-priv`, `--yt-tags`, etc. |
-| Upload-only mode | `--uo` skips processing, uploads existing clips |
+Added YouTube Shorts upload via OAuth 2.0, IMDb metadata auto-generation via OMDb API (title, tags, description from `tt#######` filenames), upload-only mode (`--uo`), and short CLI aliases.
 
 ### Session 4 (2026-03-02): Meta (Facebook + Instagram) Upload Integration
+Built `meta_uploader.py` — Facebook uses `/{page_id}/videos` multipart upload, Instagram uses litterbox.catbox.moe relay → `video_url` parameter. Key lessons: rupload.facebook.com returns 404 for new accounts (don't use it), `ig_user_id` must be the Instagram Business Account ID (not Facebook user ID), and app must be in Live mode.
 
-#### What was built
-New module `trendwatch/meta_uploader.py` with `MetaUploader` class:
-- `upload_facebook_reel()` — multipart upload via `/{page_id}/videos`
-- `upload_instagram_reel()` — catbox.moe relay → `video_url` parameter
-- `upload_batch_facebook()` / `upload_batch_instagram()` — batch wrappers
-- `save_upload_metadata()` — saves results to JSON
-- Results: `output/{id}/facebook_uploads.json`, `instagram_uploads.json`
-
-New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
-
-#### Errors encountered and how they were fixed
-
-**1. Wrong `page_id` (Facebook)**
-- Symptom: API returned errors referencing an Instagram profile ID
-- Cause: Used the Facebook profile/user ID (`122158...`) instead of the Page ID
-- Fix: Run `GET /me/accounts` in Graph API Explorer to get the actual Page ID (`1043787692147910`) and the page's own access token
-
-**2. Missing token permissions**
-- Symptom: `Invalid Scopes: pages_read_engagement` / `Invalid Scopes: manage_pages`
-- Cause: Token generated without correct scopes; "Get Page Access Token" button in Graph Explorer uses the deprecated `manage_pages` scope
-- Fix: Manually add `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`, `publish_video`, `instagram_basic`, `instagram_content_publish` in Graph Explorer → Generate User Token → use the page's access_token from `/me/accounts` response
-
-**3. App in Development mode blocking uploads**
-- Symptom: Video upload API calls failing with permission errors
-- Cause: Meta apps in Development mode only allow app admins/testers to use the API for uploads
-- Fix: Switch app to **Live mode** (requires adding a Privacy Policy URL — any URL works for testing)
-
-**4. `rupload.facebook.com` 404 for Facebook Reels**
-- Symptom: `POST /{page_id}/video_reels?upload_phase=start` returned an upload URL, but `PUT https://rupload.facebook.com/video-upload/...` responded `404 Not Found`
-- Cause: New Facebook Pages without established Reels API eligibility are not provisioned on the rupload backend
-- Fix: Switch from the `video_reels` resumable flow to the `/{page_id}/videos` **multipart upload** endpoint, which works immediately for all Pages. 10/10 uploads succeeded.
-
-**5. IMDb metadata not used in `--upload-only` mode**
-- Symptom: `--uo --u-fb` used default title template instead of IMDb-generated titles/descriptions
-- Cause: The IMDb metadata lookup only ran in the main processing pipeline, not in the upload-only code path
-- Fix: Added the same IMDb metadata check to both the Facebook and Instagram upload-only blocks in `__main__.py`
-
-**6. Wrong `ig_user_id` (Instagram)**
-- Symptom: API error `(#12) singular wall post API is deprecated for versions v2.4 and higher`
-- Cause: `ig_user_id` was set to `77382301547`, which is a Facebook profile/user ID — not an Instagram Business Account ID
-- Fix: Query `GET /{page_id}?fields=instagram_business_account` using a User token with `instagram_basic` scope → got correct IG Business Account ID `17841477446422787`
-
-**7. `rupload.facebook.com` 404 for Instagram Reels**
-- Symptom: `POST /{ig_user_id}/media?upload_type=resumable` returned a valid `uri`, but `PUT https://rupload.facebook.com/ig-api-upload/...` responded `404 Not Found`
-- Cause: Same root cause as Facebook — new/ineligible accounts are not provisioned on the rupload backend. Unlike Facebook, Instagram has no equivalent simple multipart endpoint.
-- Fix: Upload the video file to **catbox.moe** (free file host, 200 MB limit, no account needed) to obtain a public HTTPS URL, then create the Instagram media container using `video_url={catbox_url}` instead of `upload_type=resumable`. Instagram fetches the file from catbox.moe and processes it. 9/10 uploads succeeded (1 failure was an anomalously short clip below Instagram's minimum Reel duration).
-
-#### Final working flow summary
-| Platform | Upload method |
-|----------|--------------|
-| Facebook | `POST /{page_id}/videos` multipart (direct binary, no rupload) |
-| Instagram | Upload to catbox.moe → `POST /{ig_user_id}/media?video_url=...` → poll → publish |
+### Session 5 (2026-03-03): Multi-Platform Selection & Chunk-Based Part Numbers
+Added multi-platform `-p` flag (comma-separated or repeated). Upload part numbers now match chunk numbers from filenames instead of sequential index.
 
 ---
 
@@ -205,6 +138,10 @@ New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
 ✅ **Multi-platform `-p`** - Select multiple platforms: `-p yt,ig,fb` or `-p yt -p ig`
 ✅ **Chunk-based part numbers** - Part numbers in titles match chunk numbers from filenames
 ✅ **Transcode-once** - FFmpeg runs once; other platform folders populated by file copy (no re-encoding)
+✅ **Meta Graph API v25.0** - Upgraded from v21.0, auto-fetches Page Access Token (publish_video deprecated)
+✅ **Instagram litterbox relay** - Switched from catbox.moe (permanent) to litterbox (1h auto-delete)
+✅ **AVI codec fix** - Added -analyzeduration/-probesize to chunker and face detector for AVI sources
+✅ **Bug fixes** - YouTubeUploader re-instantiation, unbound fb/ig results, Instagram permalink
 
 ### Session 5 (2026-03-03): Multi-Platform Selection & Chunk-Based Part Numbers
 
@@ -220,6 +157,18 @@ New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
 | Transcode-once optimization | FFmpeg now runs once per run instead of once per platform. All 4 platforms share identical specs (1080x1920, libx264, aac, 8000k, yuv420p), so the canonical output is file-copied into each platform folder with renamed filenames — zero re-encoding |
 | Removed dead `PlatformSpec` fields | `max_duration`, `recommended_duration`, and `aspect_ratio` were defined in the dataclass and all 4 platform entries but never read anywhere in the codebase — removed entirely |
 
+### Session 7 (2026-03-05): Meta API v25, AVI Fix, Auto-Uploader, Bug Fixes
+
+| What | Detail |
+|------|--------|
+| Meta Graph API v25.0 | Upgraded from v21.0. `publish_video` permission deprecated — uploader now auto-fetches a Page Access Token from the User token via `/me/accounts` |
+| Instagram litterbox relay | Switched from catbox.moe (files stored forever) to litterbox.catbox.moe (1h auto-expiry). Instagram only needs the URL for ~2 min processing |
+| AVI frame extraction fix | Added `-analyzeduration 100M -probesize 100M` to both `chunker.py` and `face_detector.py` FFmpeg commands. AVI files with MPEG-4 ASP codec had missing stream dimensions in remuxed MP4 chunks, causing face detection to silently fail |
+| Daily auto-uploader | `autopost.py` — uploads pre-processed clips from a flat folder (10/day to YouTube, 25/day to Facebook, 25/day to Instagram). Tracked outside the main repo |
+| Instagram permalink fix | `upload_instagram_reel()` now fetches the real `permalink` from the Graph API instead of guessing a URL from the media ID |
+| YouTubeUploader re-instantiation bug | Was creating a new `YouTubeUploader()` (triggering OAuth) on every loop iteration — now created once before the loop |
+| Unbound `fb_results`/`ig_results` | Variables were uninitialized before conditional branches, causing potential `NameError` — now initialized to `[]` |
+
 ## Optional Future Enhancements
 
 - YOLOv8 person detection as alternative smart crop method
@@ -230,4 +179,4 @@ New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
 - Suppress cosmetic MediaPipe/TFLite log warnings
 - Progress bars for long operations
 - Video quality presets (low/medium/high bitrate)
-- Replace catbox.moe relay with self-hosted or configurable storage for Instagram uploads
+- ~~Replace catbox.moe relay~~ (done: switched to litterbox with 1h auto-delete)

@@ -8,6 +8,7 @@ generation from IMDb data.
 import json
 import os
 import pickle
+import re
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
@@ -353,7 +354,6 @@ class YouTubeUploader:
             filename = video_path.stem.replace('_youtube_shorts', '')
 
             # Use chunk number from filename if available, else enumeration index
-            import re
             chunk_match = re.search(r'_chunk_(\d+)', video_path.stem)
             chunk_num = int(chunk_match.group(1)) if chunk_match else i
 

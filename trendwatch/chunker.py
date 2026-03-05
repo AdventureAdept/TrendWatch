@@ -86,6 +86,10 @@ class VideoChunker:
             # parameters are present in the output even with stream copy)
             cmd = [
                 "ffmpeg",
+                "-analyzeduration",
+                "100M",
+                "-probesize",
+                "100M",
                 "-ss",
                 str(start_time),
                 "-i",

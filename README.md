@@ -302,7 +302,7 @@ Results are saved to `{output_dir}/youtube_uploads.json`:
 
 ## Meta Upload Integration
 
-TrendWatch can automatically upload your processed videos to Facebook Reels and Instagram Reels after transcoding using the Meta Graph API.
+TrendWatch can automatically upload your processed videos to Facebook Reels and Instagram Reels after transcoding using the Meta Graph API v25.0.
 
 ### Meta Quick Start
 
@@ -311,15 +311,14 @@ TrendWatch can automatically upload your processed videos to Facebook Reels and 
    - Create an app → add **Facebook Login** and **Instagram Graph API** products
    - Switch the app to **Live mode** (required for uploads to work)
 
-2. **Generate a long-lived User Access Token** with these scopes:
-   - `publish_video`
+2. **Generate a User Access Token** with these scopes:
    - `pages_manage_posts`
    - `pages_show_list`
    - `pages_read_engagement`
    - `instagram_basic`
    - `instagram_content_publish`
 
-   Use [Graph API Explorer](https://developers.facebook.com/tools/explorer/) to generate the token. Select all permissions manually — do not use the "Get Page Access Token" button as it uses a deprecated scope.
+   Use [Graph API Explorer](https://developers.facebook.com/tools/explorer/) (v25.0) to generate the token. The `publish_video` scope is no longer needed — TrendWatch automatically fetches a Page Access Token from your User token for Facebook video uploads.
 
 3. **Get your Page ID and Instagram Business Account ID:**
    - Run `GET /me/accounts` in Graph Explorer to get your `page_id` and the page's access token

@@ -87,6 +87,8 @@ trendwatch/
 - YouTube OAuth credentials: `~/.trendwatch/client_secrets.json`
 - YouTube token cache: `~/.trendwatch/youtube_token.pickle`
 - Credentials .env: `~/.trendwatch/.env` (META_ACCESS_TOKEN, META_PAGE_ID, META_IG_USER_ID, OMDB_API_KEY)
+- Meta Graph API: v25.0 — Facebook uploads use auto-fetched Page Access Token (publish_video deprecated)
+- Instagram relay: litterbox.catbox.moe (1h expiry) for video_url uploads
 - MediaPipe model: `trendwatch/models/face_detection_short_range.tflite`
 - Output path: `output/{video_id}/{platform}/`
 - Upload results: `output/{video_id}/youtube_uploads.json`, `facebook_uploads.json`, `instagram_uploads.json`

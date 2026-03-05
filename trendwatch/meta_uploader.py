@@ -2,11 +2,12 @@
 
 This module provides long-lived access token authentication (manual setup)
 and batch upload functionality for Facebook Reels and Instagram Reels
-using the Meta Graph API v21.0.
+using the Meta Graph API v25.0.
 """
 
 import json
 import os
+import re
 import time
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -16,7 +17,7 @@ from typing import List, Optional
 import requests
 
 # Meta Graph API base URL
-GRAPH_API_BASE = "https://graph.facebook.com/v21.0"
+GRAPH_API_BASE = "https://graph.facebook.com/v25.0"
 
 # Resumable upload host (shared by Facebook and Instagram)
 RUPLOAD_HOST = "https://rupload.facebook.com"
@@ -67,6 +68,7 @@ class MetaUploader:
         self.access_token = os.getenv("META_ACCESS_TOKEN", "")
         self.page_id = os.getenv("META_PAGE_ID", "")
         self.ig_user_id = os.getenv("META_IG_USER_ID", "")
+        self.page_access_token = None
 
         if not self.access_token:
             raise ValueError(
@@ -76,9 +78,9 @@ class MetaUploader:
                 "   https://developers.facebook.com\n\n"
                 "2. Create an app → add 'Facebook Login' and\n"
                 "   'Instagram Graph API' products\n\n"
-                "3. Use Graph API Explorer to generate a long-lived User\n"
-                "   Access Token with scopes:\n"
-                "   publish_video, pages_manage_posts, pages_show_list,\n"
+                "3. Use Graph API Explorer to generate a User Access Token\n"
+                "   with scopes: pages_manage_posts, pages_show_list,\n"
+                "   pages_read_engagement, instagram_basic,\n"
                 "   instagram_content_publish\n\n"
                 "4. Get your Page ID and Instagram User ID:\n"
                 "   Run GET /me/accounts in Graph Explorer\n\n"
@@ -90,6 +92,45 @@ class MetaUploader:
                 "   META_IG_USER_ID=YOUR_IG_USER_ID\n"
                 "   EOF\n"
             )
+
+    def _get_page_access_token(self) -> str:
+        """Fetch a Page Access Token from the User Access Token.
+
+        Required for Facebook video uploads on Graph API v25.0+
+        (publish_video permission was deprecated; pages_manage_posts
+        on a Page token is used instead).
+
+        Returns:
+            Page Access Token string.
+
+        Raises:
+            RuntimeError: If the page token cannot be retrieved.
+        """
+        if self.page_access_token:
+            return self.page_access_token
+
+        resp = requests.get(
+            f"{GRAPH_API_BASE}/me/accounts",
+            params={"access_token": self.access_token},
+            timeout=10,
+        )
+        self._raise_for_graph_error(resp, "fetch page access token")
+
+        pages = resp.json().get("data", [])
+        for page in pages:
+            if page["id"] == self.page_id:
+                self.page_access_token = page["access_token"]
+                return self.page_access_token
+
+        # If page_id not found, try first page
+        if pages:
+            self.page_access_token = pages[0]["access_token"]
+            return self.page_access_token
+
+        raise RuntimeError(
+            f"No pages found for this token. Make sure your app has "
+            f"pages_manage_posts permission and the token is valid."
+        )
 
     # ------------------------------------------------------------------
     # Facebook Reels
@@ -148,11 +189,13 @@ class MetaUploader:
         print(f"📤 Uploading Facebook video: {title or video_path.name}")
         print(f"   File: {video_path.name}  ({file_size / 1024 / 1024:.1f} MB)")
 
+        page_token = self._get_page_access_token()
+
         with open(video_path, "rb") as f:
             resp = requests.post(
                 f"{GRAPH_API_BASE}/{self.page_id}/videos",
                 data={
-                    "access_token": self.access_token,
+                    "access_token": page_token,
                     "title": title[:255] if title else "",
                     "description": caption[:2200] if caption else "",
                     "privacy": json.dumps({"value": fb_privacy}),
@@ -211,7 +254,6 @@ class MetaUploader:
 
         for i, video_path in enumerate(video_paths, start=1):
             filename = video_path.stem.replace("_facebook_reels", "")
-            import re
             chunk_match = re.search(r'_chunk_(\d+)', video_path.stem)
             chunk_num = int(chunk_match.group(1)) if chunk_match else i
             title = title_template.format(
@@ -240,11 +282,11 @@ class MetaUploader:
     # ------------------------------------------------------------------
 
     def _upload_to_catbox(self, video_path: Path) -> str:
-        """Upload video to catbox.moe and return public URL.
+        """Upload video to litterbox.catbox.moe (1h expiry) and return public URL.
 
-        catbox.moe is a free file host (200 MB limit) used as a relay
-        because Instagram's rupload.facebook.com binary upload returns 404
-        for accounts without established Reels API eligibility.
+        litterbox is a temporary file host (200 MB limit, auto-deletes after 1h)
+        used as a relay because Instagram's rupload.facebook.com binary upload
+        returns 404 for accounts without established Reels API eligibility.
 
         Args:
             video_path: Path to video file.
@@ -262,20 +304,20 @@ class MetaUploader:
                 f"({file_size / 1024 / 1024:.0f} MB, max 200 MB)"
             )
 
-        print(f"   Uploading to temporary host (catbox.moe)...")
+        print(f"   Uploading to temporary host (litterbox.catbox.moe, 1h expiry)...")
         with open(video_path, "rb") as f:
             resp = requests.post(
-                "https://catbox.moe/user/api.php",
-                data={"reqtype": "fileupload"},
+                "https://litterbox.catbox.moe/resources/internals/api.php",
+                data={"reqtype": "fileupload", "time": "1h"},
                 files={"fileToUpload": (video_path.name, f, "video/mp4")},
                 timeout=300,
             )
-        if not resp.ok or "files.catbox.moe" not in resp.text.strip():
+        if not resp.ok or "litter.catbox.moe" not in resp.text.strip():
             raise RuntimeError(
-                f"Failed to upload to catbox.moe: {resp.text[:200]}"
+                f"Failed to upload to litterbox: {resp.text[:200]}"
             )
         url = resp.text.strip()
-        print(f"   Temporary URL: {url}")
+        print(f"   Temporary URL: {url} (expires in 1h)")
         return url
 
     def upload_instagram_reel(
@@ -382,7 +424,23 @@ class MetaUploader:
         self._raise_for_graph_error(publish_resp, "publish IG reel")
 
         published_id = publish_resp.json()["id"]
-        video_url = f"https://www.instagram.com/reel/{published_id}/"
+
+        # Fetch the permalink from the API (the media ID is not a valid URL slug)
+        video_url = f"https://www.instagram.com/p/{published_id}/"
+        try:
+            perm_resp = requests.get(
+                f"{GRAPH_API_BASE}/{published_id}",
+                params={
+                    "fields": "permalink",
+                    "access_token": self.access_token,
+                },
+                timeout=10,
+            )
+            perm_data = perm_resp.json()
+            if "permalink" in perm_data:
+                video_url = perm_data["permalink"]
+        except Exception:
+            pass  # fall back to placeholder URL
 
         print(f"✅ Instagram Reel published!")
         print(f"   Media ID: {published_id}")
@@ -424,7 +482,6 @@ class MetaUploader:
 
         for i, video_path in enumerate(video_paths, start=1):
             filename = video_path.stem.replace("_instagram_reels", "")
-            import re
             chunk_match = re.search(r'_chunk_(\d+)', video_path.stem)
             chunk_num = int(chunk_match.group(1)) if chunk_match else i
             caption = caption_template.format(

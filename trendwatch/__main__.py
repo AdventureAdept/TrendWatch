@@ -692,10 +692,9 @@ def main(
                         # Priority 2: Use IMDb metadata for all videos
                         click.echo(f"🎬 Auto-generating titles, descriptions, and tags from IMDb data")
 
-                        # Upload each video with IMDb-generated metadata
-                        from .youtube_uploader import UploadResult
                         results = []
                         total = len(youtube_videos)
+                        uploader = YouTubeUploader()
 
                         click.echo(f"\n📺 Starting batch upload: {total} video(s)\n")
 
@@ -716,8 +715,6 @@ def main(
                                 metadata['tags'] = custom_tags + metadata['tags']
                                 metadata['tags'] = list(dict.fromkeys(metadata['tags']))[:15]  # Remove dupes, limit to 15
 
-                            # Upload single video
-                            uploader = YouTubeUploader()
                             try:
                                 result = uploader.upload_short(
                                     video_path=video_path,
@@ -750,6 +747,7 @@ def main(
                         # Cap tags at YouTube's 15-tag limit
                         yt_tags = yt_source_metadata.get('tags', [])[:15]
 
+                        uploader = YouTubeUploader()
                         click.echo(f"\n📺 Starting batch upload: {total} video(s)\n")
 
                         for i, video_path in enumerate(youtube_videos, start=1):
@@ -758,7 +756,6 @@ def main(
                             if len(title) > 100:
                                 title = title[:97] + "..."
 
-                            uploader = YouTubeUploader()
                             try:
                                 result = uploader.upload_short(
                                     video_path=video_path,
@@ -794,7 +791,6 @@ def main(
 
                     # Save upload metadata
                     if results:
-                        uploader = YouTubeUploader()
                         metadata_path = output_dir / "youtube_uploads.json"
                         uploader.save_upload_metadata(results, metadata_path)
 
@@ -814,6 +810,7 @@ def main(
                 if fb_videos:
                     meta_uploader = MetaUploader()
                     tags = [t.strip() for t in meta_tags.split(",")] if meta_tags else []
+                    fb_results = []
 
                     # Metadata priority: IMDb > source metadata > CLI options
                     has_custom_meta = (
@@ -891,6 +888,7 @@ def main(
                 ig_videos = sorted(instagram_transcoded_paths)
                 if ig_videos:
                     meta_uploader = MetaUploader()
+                    ig_results = []
 
                     # Metadata priority: IMDb > source metadata > CLI options
                     has_custom_meta = (
