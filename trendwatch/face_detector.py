@@ -150,6 +150,8 @@ class MediaPipeFaceDetector:
 
             cmd = [
                 "ffmpeg",
+                "-analyzeduration", "100M",
+                "-probesize", "100M",
                 "-ss", str(timestamp),
                 "-i", str(video_path),
                 "-vframes", "1",

@@ -91,3 +91,9 @@ trendwatch/
 - Output path: `output/{video_id}/{platform}/`
 - Upload results: `output/{video_id}/youtube_uploads.json`, `facebook_uploads.json`, `instagram_uploads.json`
 
+## Platform Encoding
+
+All 4 platforms share identical encoding specs (1080x1920, libx264, aac, 8000k, yuv420p). FFmpeg therefore runs **once** using a canonical platform (youtube if selected, else first platform), and other platform folders are populated by `shutil.copy2` with renamed filenames — no re-encoding.
+
+`PlatformSpec` fields: `name`, `width`, `height`, `video_codec`, `audio_codec`, `video_bitrate`, `audio_bitrate`, `pixel_format`. The fields `max_duration`, `recommended_duration`, and `aspect_ratio` were removed (never read).
+

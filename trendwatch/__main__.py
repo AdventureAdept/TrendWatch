@@ -615,26 +615,50 @@ def main(
         # Step 4: Transcode for platforms
         platforms = get_all_platforms() if "all" in platform else list(dict.fromkeys(platform))
 
+        # Transcode once using canonical platform (prefer youtube, else first selected)
+        canonical_platform = "youtube" if "youtube" in platforms else platforms[0]
+        base_spec = get_platform_spec(canonical_platform)
+        click.echo(f"🎨 Transcoding for {base_spec.name}...")
+        canonical_paths = transcoder.transcode_all(chunk_paths, output_dir, base_spec)
+        click.echo(f"✅ Created {len(canonical_paths)} videos for {base_spec.name}")
+        click.echo(f"   Output: {canonical_paths[0].parent}\n")
+
+        canonical_suffix = f"_{base_spec.name.lower().replace(' ', '_')}"
+
         youtube_transcoded_paths = []
         facebook_transcoded_paths = []
         instagram_transcoded_paths = []
+
+        # Assign canonical paths to the right variable
+        if canonical_platform == "youtube":
+            youtube_transcoded_paths = canonical_paths
+        elif canonical_platform == "facebook":
+            facebook_transcoded_paths = canonical_paths
+        elif canonical_platform == "instagram":
+            instagram_transcoded_paths = canonical_paths
+
+        # Copy canonical files to each other platform folder (no re-encoding)
         for platform_name in platforms:
+            if platform_name == canonical_platform:
+                continue
             platform_spec = get_platform_spec(platform_name)
-            click.echo(f"🎨 Transcoding for {platform_spec.name}...")
-
-            transcoded_paths = transcoder.transcode_all(
-                chunk_paths, output_dir, platform_spec
-            )
-
+            platform_dir = output_dir / platform_spec.name.lower().replace(" ", "_")
+            platform_dir.mkdir(parents=True, exist_ok=True)
+            platform_suffix = f"_{platform_spec.name.lower().replace(' ', '_')}"
+            paths = []
+            for src in canonical_paths:
+                new_name = src.name.replace(canonical_suffix, platform_suffix)
+                dst = platform_dir / new_name
+                shutil.copy2(src, dst)
+                paths.append(dst)
+            click.echo(f"📋 Copied {len(paths)} videos for {platform_spec.name}")
+            click.echo(f"   Output: {platform_dir}\n")
             if platform_name == "youtube":
-                youtube_transcoded_paths = transcoded_paths
+                youtube_transcoded_paths = paths
             elif platform_name == "facebook":
-                facebook_transcoded_paths = transcoded_paths
+                facebook_transcoded_paths = paths
             elif platform_name == "instagram":
-                instagram_transcoded_paths = transcoded_paths
-
-            click.echo(f"✅ Created {len(transcoded_paths)} videos for {platform_spec.name}")
-            click.echo(f"   Output: {transcoded_paths[0].parent}\n")
+                instagram_transcoded_paths = paths
 
         # Load IMDb metadata once for all upload steps
         imdb_metadata = None

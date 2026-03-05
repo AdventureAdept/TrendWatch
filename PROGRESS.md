@@ -1,6 +1,6 @@
 # TrendWatch - Progress Update
 
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-03 (Session 6)
 
 ## Original Goal
 
@@ -204,6 +204,7 @@ New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
 ✅ **Upload-only mode** - Re-upload existing clips without reprocessing
 ✅ **Multi-platform `-p`** - Select multiple platforms: `-p yt,ig,fb` or `-p yt -p ig`
 ✅ **Chunk-based part numbers** - Part numbers in titles match chunk numbers from filenames
+✅ **Transcode-once** - FFmpeg runs once; other platform folders populated by file copy (no re-encoding)
 
 ### Session 5 (2026-03-03): Multi-Platform Selection & Chunk-Based Part Numbers
 
@@ -211,6 +212,13 @@ New CLI flags: `--u-fb`, `--u-ig`, `--mt`, `--md`, `--mtags`, `--mp`
 |------|--------|
 | Multi-platform `-p` flag | `-p` now accepts multiple values: `-p yt,ig,fb` (comma-separated) or `-p yt -p ig -p fb` (repeated). Default: all |
 | Chunk-based part numbers | Upload part numbers now match the chunk number from the filename (e.g., `_chunk_011` → "Part 011") instead of sequential enumeration index |
+
+### Session 6 (2026-03-03): Transcode Once + Remove Dead PlatformSpec Fields
+
+| What | Detail |
+|------|--------|
+| Transcode-once optimization | FFmpeg now runs once per run instead of once per platform. All 4 platforms share identical specs (1080x1920, libx264, aac, 8000k, yuv420p), so the canonical output is file-copied into each platform folder with renamed filenames — zero re-encoding |
+| Removed dead `PlatformSpec` fields | `max_duration`, `recommended_duration`, and `aspect_ratio` were defined in the dataclass and all 4 platform entries but never read anywhere in the codebase — removed entirely |
 
 ## Optional Future Enhancements
 
