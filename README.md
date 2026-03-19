@@ -29,6 +29,7 @@ CLI tool that processes videos (from URLs or local files) and splits them into 6
 
 - 📥 Download videos from any URL (YouTube, Twitter, etc.) using yt-dlp
 - 📁 Process local video files directly (no download needed)
+- 📋 **Batch mode** — pass a `.txt` file with one URL or path per line to process multiple videos in sequence
 - ✂️ Split videos into 60-second chunks (configurable)
 - 🎨 Transcode to platform-specific formats (9:16 aspect ratio, proper encoding) — **FFmpeg runs once** regardless of how many platforms are selected; other platform folders are populated by file copy
 - 🤖 Smart cropping with **MediaPipe face detection**
@@ -93,6 +94,22 @@ python3 -m trendwatch "./my-video.mkv"
 ```
 
 **Supported video formats:** MP4, MKV, AVI, MOV, WebM, FLV, WMV, M4V
+
+**From a text file (batch mode):**
+```bash
+python3 -m trendwatch urls.txt
+```
+Process multiple URLs or file paths in one run. Create a `.txt` file with one entry per line — blank lines and lines starting with `#` are ignored:
+```
+# Morning batch
+https://youtube.com/watch?v=aaa
+https://youtube.com/watch?v=bbb
+
+# Local files
+/movies/tt1856101.mkv
+/movies/tt0816692.mkv
+```
+All CLI options apply to every entry in the file.
 
 ### Specify platform(s):
 ```bash

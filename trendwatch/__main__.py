@@ -305,6 +305,7 @@ def main(
     VIDEO_INPUT can be:
       - YouTube URL: https://youtube.com/watch?v=...
       - Local file path: /path/to/video.mp4 or ./video.mkv
+      - Text file (.txt): one URL or path per line (lines starting with # are ignored)
       - Folder path (with --upload-only): output/Voz2OVsKbQY or output/Voz2OVsKbQY/youtube_shorts
     """
     # --upload-only: skip all processing, just upload existing clips
@@ -512,6 +513,48 @@ def main(
 
         click.echo("🎉 Done!")
         click.echo(f"📁 Output directory: {output_dir.absolute()}")
+        return
+
+    # Batch mode: .txt file with one URL or path per line
+    txt_path = Path(video_input)
+    if txt_path.suffix.lower() == ".txt":
+        if not txt_path.is_file():
+            click.echo(f"❌ File not found: {video_input}", err=True)
+            raise click.Abort()
+        lines = [l.strip() for l in txt_path.read_text().splitlines()]
+        inputs = [l for l in lines if l and not l.startswith("#")]
+        if not inputs:
+            click.echo("❌ No URLs or paths found in the file.", err=True)
+            raise click.Abort()
+        click.echo(f"📄 Batch mode: {len(inputs)} input(s) from {txt_path.name}\n")
+        ctx = click.get_current_context()
+        for i, inp in enumerate(inputs, 1):
+            click.echo(f"─── [{i}/{len(inputs)}] {inp} ───\n")
+            ctx.invoke(
+                main,
+                video_input=inp,
+                platform=platform,
+                output=output,
+                duration=duration,
+                max_chunks=max_chunks,
+                smart_crop=smart_crop,
+                hflip=hflip,
+                keep_temp=keep_temp,
+                fetch_imdb=fetch_imdb,
+                upload_youtube=upload_youtube,
+                youtube_title=youtube_title,
+                youtube_description=youtube_description,
+                youtube_privacy=youtube_privacy,
+                youtube_category=youtube_category,
+                youtube_tags=youtube_tags,
+                upload_facebook=upload_facebook,
+                upload_instagram=upload_instagram,
+                meta_title=meta_title,
+                meta_description=meta_description,
+                meta_tags=meta_tags,
+                meta_privacy=meta_privacy,
+                upload_only=upload_only,
+            )
         return
 
     # Detect input type
